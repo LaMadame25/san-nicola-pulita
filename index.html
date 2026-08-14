@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#1F4D2C" />
+<meta name="description" content="Segnala rifiuti abbandonati e discuti dell'ambiente a San Nicola la Strada. Un progetto civico dei cittadini." />
+<meta property="og:title" content="San Nicola Pulita" />
+<meta property="og:description" content="Il social dei rifiuti e dell'ambiente a San Nicola la Strada." />
+<meta property="og:type" content="website" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SN Pulita" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<title>San Nicola Pulita</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,0,0&display=block" />
+<style>
+  :root{
+    --bg:#F3F6EE; --card:#FFFFFF; --ink:#1E2E1F; --inkSoft:#5C6B57;
+    --green:#3A7D44; --greenDark:#1F4D2C; --greenSoft:#DFEEDD;
+    --amber:#C08A2E; --amberSoft:#F3E7D0; --red:#B5541B; --redSoft:#F3DDCC;
+    --line:#E1E8DA;
+  }
+  *{box-sizing:border-box;font-family:'Inter',sans-serif;}
+  .disp{font-family:'Nunito',sans-serif;}
+  html, body{height:100%;margin:0;background:var(--bg);color:var(--ink);overflow:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  body{display:flex;flex-direction:column;}
+
+  /* Icone uniformi (Material Symbols) — sostituiscono le emoji in tutta l'app */
+  .msr{
+    font-family:'Material Symbols Rounded';
+    font-weight:normal;font-style:normal;
+    display:inline-block;line-height:1;
+    letter-spacing:normal;text-transform:none;
+    white-space:nowrap;word-wrap:normal;direction:ltr;
+    -webkit-font-smoothing:antialiased;
+    vertical-align:middle;
+    font-size:1.15em;
+  }
+
+  /* Header */
+  header{background:var(--greenDark);padding:12px 16px;flex-shrink:0;z-index:20;}
+  .header-inner{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-icon{width:34px;height:34px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .brand-title{color:#fff;font-weight:800;font-size:16px;line-height:1.1;}
+  .brand-sub{color:#B9D6BC;font-size:10.5px;}
+  #userBadge{display:none;align-items:center;gap:6px;color:#fff;font-size:12px;font-weight:800;background:rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;}
+  #userBadge.show{display:flex;}
+
+  /* Pages container (horizontal swipe) */
+  #pagesContainer{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+  .page{flex:0 0 100%;scroll-snap-align:start;height:100%;overflow-y:auto;overflow-x:hidden;position:relative;}
+  .page-inner{max-width:640px;margin:0 auto;padding:16px 16px 90px;}
+
+  .pop{transition:transform .12s ease;cursor:pointer;border:none;}
+  .pop:active{transform:scale(0.94);}
+
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-top:16px;box-shadow:0 1px 3px rgba(31,77,44,.08),0 1px 2px rgba(31,77,44,.04);}
+  .card:first-child{margin-top:0;}
+
+  /* Map page */
+  .map-page-inner{padding:0;max-width:640px;margin:0 auto;height:100%;display:flex;flex-direction:column;}
+  #leafletMap{width:100%;flex:1;overflow:hidden;position:relative;isolation:isolate;}
+  .map-hint-bar{padding:10px 16px;font-size:12px;color:var(--inkSoft);background:var(--card);flex-shrink:0;}
+  #confirmLocBar{display:none;position:absolute;left:0;right:0;bottom:0;padding:12px 16px;background:var(--card);border-top:1px solid var(--line);z-index:30;align-items:center;justify-content:space-between;gap:10px;}
+  #confirmLocBar.show{display:flex;}
+  .confirm-btn{background:var(--green);color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;padding:9px 16px;border-radius:999px;white-space:nowrap;}
+
+  /* Composer / Segnala page */
+  .composer-row{display:flex;gap:10px;}
+  .avatar{width:40px;height:40px;border-radius:50%;background:var(--greenSoft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .avatar.sm{width:36px;height:36px;font-size:16px;}
+  textarea, input[type=text]{border:none;outline:none;font-size:16px;width:100%;font-family:'Inter',sans-serif;}
+  #postText{resize:none;padding:8px 0;}
+  .loc-row{margin-left:50px;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .loc-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;}
+  .loc-set{background:var(--greenSoft);color:var(--greenDark);border-color:var(--greenSoft);}
+  .composer-controls{display:flex;align-items:center;justify-content:space-between;margin-top:10px;margin-left:50px;flex-wrap:wrap;gap:8px;}
+  select{font-size:16px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:#fff;}
+  .file-btn{display:flex;align-items:center;gap:5px;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;}
+
+  #aiAnalysis{margin-left:50px;margin-top:10px;padding:12px;border-radius:12px;background:var(--greenSoft);display:none;}
+  #aiAnalysis.show{display:block;}
+  #aiAnalysis.loading{background:var(--bg);}
+  .ai-spin{display:inline-block;width:12px;height:12px;border:2px solid var(--inkSoft);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:-1px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ai-material{font-weight:800;font-size:13px;color:var(--greenDark);}
+  .ai-cat-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--card);color:var(--greenDark);margin-left:6px;}
+  .ai-guide{font-size:12px;color:var(--ink);margin-top:6px;line-height:1.5;}
+  .ai-contacts{font-size:11px;color:var(--inkSoft);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);}
+  .ai-error{font-size:12px;color:var(--red);}
+  .ai-retry{font-size:11px;font-weight:800;color:var(--green);background:none;margin-top:6px;text-decoration:underline;}
+
+  #calendarDetails{margin-top:16px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:0 1px 3px rgba(31,77,44,.08);}
+  #calendarDetails summary{font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;}
+  #calendarDetails summary::-webkit-details-marker{display:none;}
+  .cal-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .cal-row:last-child{border-bottom:none;}
+  .cal-icon{width:38px;height:38px;border-radius:11px;background:var(--greenSoft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .cal-text{flex:1;min-width:0;}
+  .cal-mat{font-weight:800;color:var(--ink);font-size:13.5px;line-height:1.3;}
+  .cal-day{color:var(--inkSoft);font-size:11.5px;margin-top:2px;}
+  .cal-day b{color:var(--greenDark);font-weight:700;}
+  .cal-rules{font-size:11.5px;color:var(--inkSoft);margin-top:10px;line-height:1.6;padding-top:10px;border-top:1px solid var(--line);}
+
+  /* Statistiche page */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .stat-box{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 3px rgba(31,77,44,.08);}
+  .stat-num{font-family:'Nunito',sans-serif;font-weight:800;font-size:22px;color:var(--greenDark);}
+  .stat-label{font-size:10px;color:var(--inkSoft);font-weight:700;text-transform:uppercase;margin-top:2px;}
+  .section-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;color:var(--inkSoft);margin:20px 0 10px;}
+  .bar-row{margin-bottom:10px;}
+  .bar-row-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;}
+  .bar-row-label{font-weight:700;}
+  .bar-track{height:8px;background:var(--bg);border-radius:999px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:999px;background:var(--green);}
+  .zone-rank{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .zone-rank:last-child{border-bottom:none;}
+  .zone-rank-medal{font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;width:24px;height:24px;border-radius:50%;background:var(--bg);color:var(--inkSoft);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .zone-rank-info{flex:1;min-width:0;}
+  .zone-rank-name{font-weight:800;font-size:13px;}
+  .zone-rank-count{font-size:11px;color:var(--inkSoft);}
+  .stats-empty{text-align:center;font-size:13px;color:var(--inkSoft);padding:30px 0;}
+  .demo-banner{background:#FDECC8;border:1px solid #E8C877;color:#7A5A0A;font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:10px;margin-bottom:14px;text-align:center;}
+  .publish-btn{font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;padding:9px 18px;border-radius:999px;background:#C9D6C4;color:#fff;display:flex;align-items:center;gap:5px;}
+  .publish-btn.active{background:var(--green);cursor:pointer;}
+
+  /* Forum page */
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .filter-label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--inkSoft);}
+  .chip{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:#fff;color:var(--inkSoft);cursor:pointer;}
+  .chip.active{background:var(--greenDark);color:#fff;border-color:var(--greenDark);}
+  .post{margin-top:22px;}
+  .post-top{display:flex;align-items:center;gap:10px;}
+  .post-name{font-weight:800;font-size:14px;}
+  .post-time{font-size:12px;color:var(--inkSoft);}
+  .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+  .tag{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:800;background:var(--greenSoft);color:var(--greenDark);}
+  .tag.stato{background:var(--redSoft);color:var(--red);}
+  .tag.stato.in-carico{background:var(--amberSoft);color:var(--amber);}
+  .tag.stato.risolto{background:var(--greenSoft);color:var(--greenDark);}
+  .post-text{font-size:14px;line-height:1.5;margin-top:10px;}
+  .post-photo{width:100%;margin-top:10px;border-radius:12px;max-height:260px;object-fit:cover;}
+  .post-actions{display:flex;gap:18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+  .action-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;background:none;color:var(--inkSoft);}
+  .action-btn.liked{color:var(--red);}
+  .comments{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:none;}
+  .comments.show{display:block;}
+  .comment-item{font-size:13px;background:var(--bg);padding:7px 10px;border-radius:10px;margin-bottom:6px;}
+  .comment-item:first-child{margin-top:2px;}
+  .comment-input-row{display:flex;gap:8px;margin-top:6px;}
+  .comment-input-row input{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:16px;}
+  .comment-send{color:var(--green);background:none;}
+  .empty{text-align:center;font-size:13px;color:var(--inkSoft);padding:30px 0;}
+  .footer-note{font-size:11px;text-align:center;color:var(--inkSoft);margin-top:22px;}
+  .pin-marker{background:none;border:none;}
+
+  /* Bottom nav */
+  #bottomNav{flex-shrink:0;display:flex;justify-content:space-around;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:40;}
+  .nav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--inkSoft);font-family:'Nunito',sans-serif;font-weight:800;font-size:9.5px;padding:4px 8px;border-radius:12px;cursor:pointer;flex:1;}
+  .nav-btn .nav-icon{font-size:19px;line-height:1;}
+  .nav-btn.active{color:var(--green);}
+  .nav-btn.active .nav-icon{transform:scale(1.1);}
+
+  /* Page dots — indicatore chiaro di dove ti trovi tra le pagine */
+  #pageDots{flex-shrink:0;display:flex;justify-content:center;align-items:center;gap:7px;padding:8px 0 6px;background:var(--card);border-top:1px solid var(--line);}
+  #pageDots .dot{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer;transition:all .2s ease;}
+  #pageDots .dot.active{background:var(--green);width:20px;border-radius:999px;}
+
+  /* Login overlay */
+  #loginOverlay{position:fixed;inset:0;background:var(--greenDark);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  #loginOverlay.hidden{display:none;}
+  .login-card{background:var(--card);border-radius:20px;padding:28px 24px;max-width:340px;width:100%;text-align:center;}
+  .login-emoji{font-size:40px;margin-bottom:8px;}
+  .login-title{font-size:20px;font-weight:800;margin-bottom:4px;}
+  .login-sub{font-size:13px;color:var(--inkSoft);margin-bottom:20px;}
+  .login-input{border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;width:100%;margin-bottom:14px;text-align:center;}
+  .avatar-pick-row{display:flex;justify-content:center;gap:8px;margin-bottom:20px;}
+  .avatar-pick{width:44px;height:44px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid transparent;}
+  .avatar-pick.selected{border-color:var(--green);background:var(--greenSoft);}
+  .login-btn{width:100%;padding:12px;border-radius:999px;background:#C9D6C4;color:#fff;font-weight:800;font-size:14px;border:none;}
+  .login-btn.active{background:var(--green);cursor:pointer;}
+  .login-note{font-size:11px;color:var(--inkSoft);margin-top:12px;}
+
+  #toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--greenDark);color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:all .25s ease;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="login-emoji"><span class="msr" style="font-size:40px;color:var(--green);">eco</span></div>
+    <div class="login-title disp">Benvenuto su San Nicola Pulita</div>
+    <div class="login-sub">Entra per segnalare e discutere con il quartiere</div>
+    <input type="text" id="loginName" class="login-input" placeholder="Il tuo nome o nickname" maxlength="20" />
+    <div class="avatar-pick-row" id="avatarPickRow">
+      <div class="avatar-pick" data-icon="eco"><span class="msr">eco</span></div>
+      <div class="avatar-pick" data-icon="park"><span class="msr">park</span></div>
+      <div class="avatar-pick" data-icon="forest"><span class="msr">forest</span></div>
+      <div class="avatar-pick" data-icon="local_florist"><span class="msr">local_florist</span></div>
+      <div class="avatar-pick" data-icon="grass"><span class="msr">grass</span></div>
+    </div>
+    <button class="login-btn" id="loginBtn">Entra</button>
+    <div class="login-note">Accesso dimostrativo — non richiede password, serve solo a mostrare come funzionerebbe l'esperienza utente.</div>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon"><span class="msr" style="font-size:17px;color:#fff;">location_on</span></div>
+      <div>
+        <div class="brand-title disp">San Nicola Pulita</div>
+        <div class="brand-sub">Il social dei rifiuti e dell'ambiente in città</div>
+      </div>
+    </div>
+    <span id="userBadge"></span>
+  </div>
+</header>
+
+<div id="pagesContainer">
+
+  <!-- PAGE 1: SEGNALA -->
+  <section class="page" data-page="segnala">
+    <div class="page-inner">
+      <form class="card" id="composer">
+        <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Nuova segnalazione o discussione</div>
+        <div class="composer-row">
+          <div class="avatar"><span class="msr" style="color:var(--green);">eco</span></div>
+          <textarea id="postText" rows="3" maxlength="500" placeholder="Cosa hai notato in città? Racconta ai vicini..."></textarea>
+        </div>
+        <div style="margin-left:50px;font-size:11px;color:var(--inkSoft);text-align:right;" id="charCount"></div>
+        <div class="loc-row">
+          <button type="button" class="loc-btn pop" id="useGpsBtn"><span class="msr" style="font-size:14px;">my_location</span> Usa la mia posizione</button>
+          <button type="button" class="loc-btn pop" id="pickMapBtn"><span class="msr" style="font-size:14px;">map</span> Scegli sulla mappa</button>
+          <button type="button" id="changeLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">edit</span> Cambia</button>
+          <button type="button" id="clearLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">close</span></button>
+        </div>
+        <div style="margin-left:50px;font-size:11px;margin-top:4px;" id="locStatus"></div>
+        <div class="composer-controls">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="tipoSelect">
+              <option>Rifiuti ingombranti</option>
+              <option>Discarica abusiva</option>
+              <option>Cassonetti pieni</option>
+              <option>Materiale pericoloso</option>
+              <option>Discussione / idea</option>
+            </select>
+            <button type="button" class="file-btn pop" id="photoBtn"><span class="msr" style="font-size:14px;">photo_camera</span> Foto</button>
+            <input type="file" id="photoInput" accept="image/*" style="display:none;" />
+            <img id="photoPreview" style="display:none;width:32px;height:32px;border-radius:6px;object-fit:cover;" />
+          </div>
+          <button type="submit" class="publish-btn" id="publishBtn">Pubblica <span class="msr" style="font-size:14px;color:#fff;">send</span></button>
+        </div>
+        <div id="aiAnalysis"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- PAGE 2: CALENDARIO -->
+  <section class="page" data-page="calendario">
+    <div class="page-inner">
+      <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Calendario raccolta differenziata</div>
+      <div class="card" style="margin-top:0;">
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">compost</span></div>
+          <div class="cal-text"><div class="cal-mat">Organico</div><div class="cal-day">Esponi <b>domenica sera</b> · raccolta lunedì</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">description</span></div>
+          <div class="cal-text"><div class="cal-mat">Carta, Cartone e Tetrapak</div><div class="cal-day">Esponi <b>lunedì sera</b> · raccolta martedì</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">delete</span></div>
+          <div class="cal-text"><div class="cal-mat">Indifferenziato + Organico</div><div class="cal-day">Esponi <b>martedì sera</b> · raccolta mercoledì</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">liquor</span></div>
+          <div class="cal-text"><div class="cal-mat">Vetro</div><div class="cal-day">Esponi <b>mercoledì sera</b> · raccolta giovedì</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">recycling</span></div>
+          <div class="cal-text"><div class="cal-mat">Plastica e Metalli</div><div class="cal-day">Esponi <b>giovedì sera</b> · raccolta venerdì</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">compost</span></div>
+          <div class="cal-text"><div class="cal-mat">Organico</div><div class="cal-day">Esponi <b>venerdì sera</b> · raccolta sabato</div></div>
+        </div>
+        <div class="cal-rules">
+          <b>Regole d'oro:</b> esporre tra le 20:00 e le 22:00 circa. Indifferenziato solo in sacchetti trasparenti/semitrasparenti (mai neri). Plastica e metalli insieme nel sacco giallo/trasparente. Vetro solo nel mastello rigido, mai in buste. Ingombranti e RAEE: prenota il ritiro o portali all'Isola Ecologica di Via Evangelista.<br><br>
+          Possibili variazioni per festività o periodo estivo — verifica sempre gli avvisi ufficiali del Comune.
+        </div>
+      </div>
+      <div class="footer-note">Ecosportello, Via De Gasperi 45 (lun–ven 7:45–14:00, mar/gio fino alle 17:00) · Numero verde 800.170.905 · WhatsApp 339.4468607 · Isola Ecologica Via Evangelista.</div>
+    </div>
+  </section>
+
+  <!-- PAGE 3: FORUM -->
+  <section class="page" data-page="forum">
+    <div class="page-inner">
+      <div class="filters">
+        <div class="filter-label"><span class="msr" style="font-size:14px;">filter_alt</span> Filtra:</div>
+        <div class="chip active" data-stato="Tutti">Tutti</div>
+        <div class="chip" data-stato="Segnalato">Segnalato</div>
+        <div class="chip" data-stato="In carico">In carico</div>
+        <div class="chip" data-stato="Risolto">Risolto</div>
+      </div>
+      <div id="feed"></div>
+      <div class="footer-note">Prototipo dimostrativo · dati non salvati tra sessioni · mappa OpenStreetMap © contributori OSM · in aggiunta ai canali ufficiali (Ecosportello, numero verde D.H.I. Spa, PEC del Comune)</div>
+    </div>
+  </section>
+
+  <!-- PAGE 4: MAPPA -->
+  <section class="page" data-page="mappa">
+    <div class="map-page-inner">
+      <div id="leafletMap"></div>
+      <div id="confirmLocBar">
+        <span id="confirmLocText" style="font-size:12px;color:var(--inkSoft);">Tocca un punto della mappa per posizionare il pin</span>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button type="button" class="confirm-btn pop" id="removePinBtn" style="display:none;background:var(--red);"><span class="msr" style="font-size:16px;color:#fff;">close</span></button>
+          <button type="button" class="confirm-btn pop" id="confirmLocBtn"><span class="msr" style="font-size:14px;color:#fff;">check_circle</span> Conferma</button>
+        </div>
+      </div>
+      <div class="map-hint-bar"><span class="msr" style="font-size:13px;vertical-align:-2px;">info</span> Il colore del pin indica lo stato: <b style="color:#B5541B;">●</b> segnalato · <b style="color:#C08A2E;">●</b> in carico · <b style="color:#1F4D2C;">●</b> risolto.</div>
+    </div>
+  </section>
+
+  <!-- PAGE 5: STATISTICHE -->
+  <section class="page" data-page="statistiche">
+    <div class="page-inner">
+      <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Panoramica del territorio</div>
+      <div class="demo-banner"><span class="msr" style="font-size:13px;vertical-align:-2px;">science</span> Alcuni post sono dati di prova (contrassegnati [PROVA]) — servono solo a mostrare come appariranno le statistiche con più dati. Da rimuovere prima dell'uso reale.</div>
+      <div id="statsContent"></div>
+      <div class="footer-note">Statistiche calcolate sulle segnalazioni presenti in questa sessione — utili per mostrare al Comune dove intervenire con priorità.</div>
+    </div>
+  </section>
+
+</div>
+
+<div id="pageDots">
+  <span class="dot active" data-target="segnala"></span>
+  <span class="dot" data-target="calendario"></span>
+  <span class="dot" data-target="forum"></span>
+  <span class="dot" data-target="mappa"></span>
+  <span class="dot" data-target="statistiche"></span>
+</div>
+
+<nav id="bottomNav">
+  <button class="nav-btn active" data-target="segnala"><span class="nav-icon msr">campaign</span>Segnala</button>
+  <button class="nav-btn" data-target="calendario"><span class="nav-icon msr">calendar_month</span>Calendario</button>
+  <button class="nav-btn" data-target="forum"><span class="nav-icon msr">forum</span>Forum</button>
+  <button class="nav-btn" data-target="mappa"><span class="nav-icon msr">map</span>Mappa</button>
+  <button class="nav-btn" data-target="statistiche"><span class="nav-icon msr">bar_chart</span>Statistiche</button>
+</nav>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ---------- Data ----------
+const TOWN_CENTER = [41.0500, 14.3330]; // San Nicola la Strada, CE
+
+const ZONE_LANDMARKS = [
+  { label: "Rotonda Ovest", lat: 41.0525, lng: 14.3278 },
+  { label: "Via De Gasperi", lat: 41.0489, lng: 14.3368 },
+  { label: "Zona Stazione", lat: 41.0468, lng: 14.3312 },
+  { label: "Piazza Municipio", lat: 41.0503, lng: 14.3327 },
+  { label: "Via Appia", lat: 41.0552, lng: 14.3352 },
+];
+
+function nearestZoneLabel(lat, lng){
+  let best = null, bestD = Infinity;
+  for(const z of ZONE_LANDMARKS){
+    const d = Math.hypot(z.lat-lat, z.lng-lng);
+    if(d < bestD){ bestD = d; best = z.label; }
+  }
+  return best || "San Nicola la Strada";
+}
+
+const AVATARS = ["eco","park","forest","local_florist","grass"];
+function avatarFor(str){
+  let h=0; for(let i=0;i<str.length;i++) h+=str.charCodeAt(i);
+  return AVATARS[h % AVATARS.length];
+}
+function avatarIconHtml(str, color){
+  return `<span class="msr" style="color:${color || 'var(--greenDark)'};">${avatarFor(str)}</span>`;
+}
+
+// I post NON sono più fissi qui dentro: arrivano dal backend condiviso (Netlify Blobs),
+// così tutti gli utenti vedono le stesse segnalazioni. Vedi loadPosts() più sotto.
+let posts = [];
+let postsLoaded = false;
+
+let filterStato = "Tutti";
+let pendingLocation = null;
+let pendingFoto = null;
+let map, markersLayer;
+let pendingMarker = null;
+let pickModeActive = false;
+let currentUser = null;
+let selectedLoginIcon = "eco";
+
+const STATI = ["Segnalato", "In carico", "Risolto"];
+const STATO_CLASS = { "Segnalato":"", "In carico":"in-carico", "Risolto":"risolto" };
+const STATO_COLOR = { "Segnalato":"#B5541B", "In carico":"#C08A2E", "Risolto":"#1F4D2C" };
+
+// ---------- Guida smaltimento — calendario San Nicola la Strada (fornito dall'utente, non riscontrato su fonte ufficiale online:
+// possibili variazioni estive/festive — verificare sempre canali istituzionali per avvisi last-minute) ----------
+const DISPOSAL_GUIDE = {
+  plastica: { label:"Plastica / Metalli", icon:"recycling", guida:"Sacco giallo o trasparente, insieme ai metalli (lattine, vaschette, flaconi)." },
+  vetro: { label:"Vetro", icon:"liquor", guida:"Mastello rigido apposito — mai in buste di plastica. Bottiglie e vasi senza tappo." },
+  carta: { label:"Carta / Cartone / Tetrapak", icon:"description", guida:"Busta celeste o trasparente (mai nera). Cartone piegato e pulito." },
+  organico: { label:"Organico / Umido", icon:"compost", guida:"Sacchetto per l'umido — raccolto 3 volte a settimana." },
+  indifferenziato: { label:"Secco Indifferenziato", icon:"delete", guida:"Solo sacchetti trasparenti o semitrasparenti — mai sacchi neri." },
+  ingombranti: { label:"Ingombranti / RAEE", icon:"chair", guida:"Non lasciarlo in strada: prenota il ritiro al numero verde comunale, oppure portalo all'Isola Ecologica di Via Evangelista." },
+  pericolosi: { label:"Rifiuto pericoloso / speciale", icon:"warning", guida:"Non va nei bidoni normali (pile, farmaci, vernici, elettronici). Isola Ecologica di Via Evangelista o punti dedicati." },
+  altro: { label:"Materiale non identificato con certezza", icon:"help", guida:"Non riconosciuto con sicurezza — verifica manualmente la categoria corretta." }
+};
+
+const OFFICIAL_CONTACTS = "Ecosportello, Via De Gasperi 45 (lun–ven 7:45–14:00, mar/gio fino alle 17:00) · Numero verde 800.170.905 · WhatsApp 339.4468607 · Isola Ecologica Via Evangelista. Il calendario può variare per festività/periodo estivo: verifica sempre gli avvisi ufficiali del Comune.";
+
+const DAY_INDEX = { domenica:0, lunedì:1, martedì:2, mercoledì:3, giovedì:4, venerdì:5, sabato:6 };
+const RACCOLTA_GIORNO_SUCCESSIVO = { domenica:'lunedì', lunedì:'martedì', martedì:'mercoledì', mercoledì:'giovedì', giovedì:'venerdì', venerdì:'sabato' };
+const CATEGORIA_ESPOSIZIONE = {
+  organico: ['domenica','martedì','venerdì'],
+  carta: ['lunedì'],
+  indifferenziato: ['martedì'],
+  vetro: ['mercoledì'],
+  plastica: ['giovedì'],
+  ingombranti: [], pericolosi: [], altro: []
+};
+
+const WEEKLY_CALENDAR = [
+  { esposizione:'Domenica sera', raccolta:'Lunedì', categoria:'organico' },
+  { esposizione:'Lunedì sera', raccolta:'Martedì', categoria:'carta' },
+  { esposizione:'Martedì sera', raccolta:'Mercoledì', categoria:'indifferenziato', extra:'organico' },
+  { esposizione:'Mercoledì sera', raccolta:'Giovedì', categoria:'vetro' },
+  { esposizione:'Giovedì sera', raccolta:'Venerdì', categoria:'plastica' },
+  { esposizione:'Venerdì sera', raccolta:'Sabato', categoria:'organico' },
+];
+
+function nextExposureLabel(category){
+  const days = CATEGORIA_ESPOSIZIONE[category];
+  if(!days || days.length === 0) return null;
+  const today = new Date().getDay(); // 0=domenica ... 6=sabato, stesso ordine di DAY_INDEX
+  let best = null, bestDiff = 8;
+  days.forEach(d=>{
+    const diff = (DAY_INDEX[d] - today + 7) % 7;
+    if(diff < bestDiff){ bestDiff = diff; best = d; }
+  });
+  const raccolta = RACCOLTA_GIORNO_SUCCESSIVO[best];
+  const when = bestDiff === 0 ? 'stasera' : (bestDiff === 1 ? 'domani sera' : `${best} sera`);
+  return `<span class="msr" style="font-size:14px;vertical-align:-2px;">event_available</span> Prossima esposizione utile: <b>${when}</b> (raccolta ${raccolta})`;
+}
+
+let pendingAnalysis = null; // { material, category }
+
+async function analyzePhoto(base64DataUrl){
+  const box = document.getElementById('aiAnalysis');
+  box.className = 'show loading';
+  box.innerHTML = `<span class="ai-spin"></span><span style="font-size:12px;color:var(--inkSoft);">Analisi IA della foto in corso...</span>`;
+  pendingAnalysis = null;
+
+  try{
+    const response = await fetch("/.netlify/functions/analyze-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64DataUrl })
+    });
+
+    const parsed = await response.json();
+    if(!response.ok){
+      throw new Error(parsed.error || ('Errore server (' + response.status + ')'));
+    }
+
+    const category = DISPOSAL_GUIDE[parsed.category] ? parsed.category : 'altro';
+    const guide = DISPOSAL_GUIDE[category];
+
+    pendingAnalysis = { material: parsed.material || guide.label, category };
+    const nextDay = nextExposureLabel(category);
+
+    box.className = 'show';
+    box.innerHTML = `
+      <div><span class="ai-material"><span class="msr" style="font-size:14px;vertical-align:-2px;">search</span> ${escapeHtml(pendingAnalysis.material)}</span><span class="ai-cat-badge"><span class="msr" style="font-size:12px;vertical-align:-2px;">${guide.icon}</span> ${guide.label}</span></div>
+      <div class="ai-guide">${guide.guida}</div>
+      ${nextDay ? `<div class="ai-guide" style="font-weight:800;color:var(--greenDark);">${nextDay}</div>` : ''}
+      <div class="ai-contacts">${OFFICIAL_CONTACTS}</div>
+    `;
+  } catch(err){
+    box.className = 'show';
+    box.innerHTML = `
+      <div class="ai-error">Analisi IA non disponibile (${escapeHtml(err.message)}). Verifica che il backend sia distribuito su Netlify con la chiave ANTHROPIC_API_KEY configurata.</div>
+      <button type="button" class="ai-retry" id="aiRetryBtn">Riprova</button>
+    `;
+    const retryBtn = document.getElementById('aiRetryBtn');
+    if(retryBtn) retryBtn.addEventListener('click', ()=> analyzePhoto(base64DataUrl));
+  }
+}
+
+// ---------- Login ----------
+document.querySelectorAll('.avatar-pick').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.avatar-pick').forEach(a=>a.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedLoginIcon = el.dataset.icon;
+  });
+});
+document.querySelector('.avatar-pick').classList.add('selected');
+
+document.getElementById('loginName').addEventListener('input', ()=>{
+  const btn = document.getElementById('loginBtn');
+  if(document.getElementById('loginName').value.trim()) btn.classList.add('active');
+  else btn.classList.remove('active');
+});
+
+document.getElementById('loginBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('loginName').value.trim();
+  if(!name) return;
+  currentUser = { name, icon: selectedLoginIcon };
+  document.getElementById('loginOverlay').classList.add('hidden');
+  const badge = document.getElementById('userBadge');
+  badge.innerHTML = `<span class="msr" style="font-size:14px;color:#fff;">${selectedLoginIcon}</span> ${escapeHtml(name)}`;
+  badge.classList.add('show');
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 100);
+});
+
+// ---------- Page navigation (swipe + bottom nav) ----------
+const pagesContainer = document.getElementById('pagesContainer');
+const pageOrder = ['segnala','calendario','forum','mappa','statistiche'];
+
+function switchToPage(name){
+  const idx = pageOrder.indexOf(name);
+  if(idx < 0) return;
+  pagesContainer.scrollTo({ left: idx * pagesContainer.clientWidth, behavior: 'smooth' });
+  setActiveNav(name);
+  if(name === 'mappa' && map){ setTimeout(()=> map.invalidateSize(), 300); }
+}
+
+function setActiveNav(name){
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.target === name);
+  });
+  document.querySelectorAll('#pageDots .dot').forEach(d=>{
+    d.classList.toggle('active', d.dataset.target === name);
+  });
+}
+
+document.querySelectorAll('#pageDots .dot').forEach(dot=>{
+  dot.addEventListener('click', ()=> switchToPage(dot.dataset.target));
+});
+
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchToPage(btn.dataset.target));
+});
+
+let scrollTimer;
+pagesContainer.addEventListener('scroll', ()=>{
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(()=>{
+    const idx = Math.round(pagesContainer.scrollLeft / pagesContainer.clientWidth);
+    const name = pageOrder[idx] || 'mappa';
+    setActiveNav(name);
+    if(name === 'mappa' && map) map.invalidateSize();
+  }, 100);
+});
+
+window.addEventListener('resize', ()=>{
+  const active = document.querySelector('.nav-btn.active').dataset.target;
+  const idx = pageOrder.indexOf(active);
+  pagesContainer.scrollTo({ left: idx * pagesContainer.clientWidth, behavior: 'auto' });
+});
+
+// ---------- Map ----------
+function initMap(){
+  if(typeof L === 'undefined'){
+    document.getElementById('leafletMap').innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--inkSoft);">Impossibile caricare la mappa (connessione assente o bloccata). Riprova più tardi.</div>';
+    return;
+  }
+  map = L.map('leafletMap').setView(TOWN_CENTER, 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  markersLayer = L.layerGroup().addTo(map);
+
+  map.on('click', (e) => {
+    if(!pickModeActive) return;
+    pendingLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+    updateLocStatus();
+  });
+
+  renderMarkers();
+  setTimeout(()=> map.invalidateSize(), 150);
+}
+
+function dotIcon(color){
+  return L.divIcon({
+    className: 'pin-marker',
+    html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>`,
+    iconSize:[16,16], iconAnchor:[8,8]
+  });
+}
+
+function renderMarkers(){
+  if(!markersLayer) return;
+  markersLayer.clearLayers();
+  posts.forEach(p=>{
+    const marker = L.marker([p.lat,p.lng], { icon: dotIcon(STATO_COLOR[p.stato]) });
+    marker.bindPopup(`<b>${p.autore}</b><br>${p.testo.slice(0,80)}${p.testo.length>80?'…':''}<br><small>${p.stato}</small>`);
+    marker.addTo(markersLayer);
+  });
+}
+
+function pendingIcon(){
+  return L.divIcon({
+    className: 'pin-marker',
+    html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:#5B4FC4;border:2px solid #fff;transform:rotate(-45deg);box-shadow:0 2px 5px rgba(0,0,0,.35);"></div>`,
+    iconSize:[22,22], iconAnchor:[11,22]
+  });
+}
+
+function renderPendingMarker(){
+  if(!map) return;
+  if(pendingMarker){ map.removeLayer(pendingMarker); pendingMarker = null; }
+  if(pendingLocation){
+    pendingMarker = L.marker([pendingLocation.lat, pendingLocation.lng], {
+      icon: pendingIcon(), draggable: true
+    }).addTo(map);
+    pendingMarker.bindPopup("La tua posizione — trascinami per aggiustare");
+    pendingMarker.on('dragend', (e)=>{
+      const pos = e.target.getLatLng();
+      pendingLocation = { lat: pos.lat, lng: pos.lng };
+      updateLocStatus();
+    });
+  }
+}
+
+function updateLocStatus(){
+  const el = document.getElementById('locStatus');
+  const changeBtn = document.getElementById('changeLocBtn');
+  const clearBtn = document.getElementById('clearLocBtn');
+  const mapText = document.getElementById('confirmLocText');
+  const removeBtn = document.getElementById('removePinBtn');
+
+  if(pendingLocation){
+    const label = `<span class="msr" style="font-size:13px;vertical-align:-2px;">location_on</span> ${nearestZoneLabel(pendingLocation.lat,pendingLocation.lng)}`;
+    el.innerHTML = label;
+    el.style.color = 'var(--green)';
+    changeBtn.style.display = 'inline-flex';
+    clearBtn.style.display = 'inline-flex';
+    mapText.textContent = label + ' — trascina il pin per aggiustare';
+    removeBtn.style.display = 'inline-flex';
+  } else {
+    el.textContent = '';
+    changeBtn.style.display = 'none';
+    clearBtn.style.display = 'none';
+    mapText.textContent = 'Tocca un punto della mappa per posizionare il pin';
+    removeBtn.style.display = 'none';
+  }
+  document.getElementById('confirmLocBar').classList.toggle('show', !!pendingLocation || pickModeActive);
+  renderPendingMarker();
+}
+
+// ---------- Rendering feed ----------
+function renderFeed(){
+  const feed = document.getElementById('feed');
+  const visible = filterStato === "Tutti" ? posts : posts.filter(p=>p.stato===filterStato);
+  if(visible.length===0){
+    feed.innerHTML = postsLoaded
+      ? `<div class="empty">Nessun post con questi filtri. Sii il primo a segnalare! <span class="msr" style="font-size:14px;vertical-align:-2px;color:var(--green);">eco</span></div>`
+      : `<div class="empty">Caricamento segnalazioni... <span class="msr" style="font-size:14px;vertical-align:-2px;color:var(--green);">sync</span></div>`;
+    return;
+  }
+  feed.innerHTML = visible.map(p => `
+    <div class="card post" data-id="${p.id}">
+      <div class="post-top">
+        <div class="avatar sm">${avatarIconHtml(p.autore, 'var(--greenDark)')}</div>
+        <div>
+          <div><span class="post-name disp">${p.autore}</span> <span class="post-time">· ${p.quando}</span></div>
+          <div class="tag-row">
+            <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${nearestZoneLabel(p.lat,p.lng)}</span>
+            ${p.tipo === "Discussione / idea"
+              ? `<span class="tag" style="background:#E4DEF7;color:#5B4FC4;"><span class="msr" style="font-size:11px;vertical-align:-1px;">forum</span> Discussione</span>`
+              : `<span class="tag stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`}
+          </div>
+        </div>
+      </div>
+      <div class="post-text">${escapeHtml(p.testo)}</div>
+      ${p.foto ? `<img class="post-photo" src="${p.foto}" />` : ''}
+      ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--greenDark);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
+      <div class="post-actions">
+        <button class="action-btn like-btn ${p.liked?'liked':''}" data-id="${p.id}"><span class="msr" style="font-size:15px;">favorite</span> ${p.like}</button>
+        <button class="action-btn comment-toggle" data-id="${p.id}"><span class="msr" style="font-size:15px;">chat_bubble</span> ${p.commenti.length}</button>
+      </div>
+      <div class="comments" id="comments-${p.id}">
+        ${p.commenti.map(c=>`<div class="comment-item"><b>${escapeHtml(c.autore)}</b> ${escapeHtml(c.testo)}</div>`).join('')}
+        <div class="comment-input-row">
+          <input type="text" placeholder="Scrivi un commento..." data-id="${p.id}" class="comment-input" />
+          <button class="comment-send pop" data-id="${p.id}"><span class="msr" style="font-size:16px;">send</span></button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.innerText = s;
+  return d.innerHTML;
+}
+
+function renderStats(){
+  const box = document.getElementById('statsContent');
+  if(!box) return;
+  if(posts.length === 0){
+    box.innerHTML = postsLoaded
+      ? `<div class="stats-empty">Ancora nessun dato da mostrare. Pubblica la prima segnalazione! <span class="msr" style="font-size:14px;vertical-align:-2px;color:var(--green);">eco</span></div>`
+      : `<div class="stats-empty">Caricamento statistiche... <span class="msr" style="font-size:14px;vertical-align:-2px;color:var(--green);">sync</span></div>`;
+    return;
+  }
+
+  const total = posts.length;
+  const segnalazioni = posts.filter(p => p.tipo !== "Discussione / idea");
+  const countStato = {};
+  STATI.forEach(s => countStato[s] = 0);
+  segnalazioni.forEach(p => { countStato[p.stato] = (countStato[p.stato]||0) + 1; });
+
+  const countTipo = {};
+  posts.forEach(p => { countTipo[p.tipo] = (countTipo[p.tipo]||0) + 1; });
+
+  const countZona = {};
+  posts.forEach(p => {
+    const z = nearestZoneLabel(p.lat, p.lng);
+    countZona[z] = (countZona[z]||0) + 1;
+  });
+  const zoneSorted = Object.entries(countZona).sort((a,b) => b[1]-a[1]);
+  const maxZonaCount = zoneSorted.length ? zoneSorted[0][1] : 1;
+
+  const tipoSorted = Object.entries(countTipo).sort((a,b) => b[1]-a[1]);
+  const maxTipoCount = tipoSorted.length ? tipoSorted[0][1] : 1;
+
+  box.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">Totale post</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--red);">${countStato['Segnalato']||0}</div><div class="stat-label">Segnalato</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--amber);">${countStato['In carico']||0}</div><div class="stat-label">In carico</div></div>
+    </div>
+
+    <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">local_fire_department</span> Zone più segnalate</div>
+    <div class="card" style="margin-top:0;">
+      ${zoneSorted.map(([zona,count],i) => `
+        <div class="zone-rank">
+          <div class="zone-rank-medal" style="${i<3 ? 'background:var(--green);color:#fff;' : ''}">${i+1}</div>
+          <div class="zone-rank-info">
+            <div class="zone-rank-name">${escapeHtml(zona)}</div>
+            <div class="bar-track" style="margin-top:4px;"><div class="bar-fill" style="width:${(count/maxZonaCount*100).toFixed(0)}%;"></div></div>
+          </div>
+          <div class="zone-rank-count">${count}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">checklist</span> Tipologie segnalate</div>
+    <div class="card" style="margin-top:0;">
+      ${tipoSorted.map(([tipo,count]) => `
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="bar-row-label">${escapeHtml(tipo)}</span><span>${count}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count/maxTipoCount*100).toFixed(0)}%;background:${tipo==='Discussione / idea' ? '#5B4FC4' : 'var(--green)'};"></div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">task_alt</span> Stato delle segnalazioni</div>
+    <div class="card" style="margin-top:0;">
+      ${STATI.map(s => `
+        <div class="bar-row">
+          <div class="bar-row-top"><span class="bar-row-label">${s}</span><span>${countStato[s]||0} / ${segnalazioni.length}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${segnalazioni.length ? ((countStato[s]||0)/segnalazioni.length*100).toFixed(0) : 0}%;background:${STATO_COLOR[s]};"></div></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.innerHTML = `<span class="msr" style="font-size:15px;vertical-align:-2px;color:#fff;">check_circle</span> ${escapeHtml(msg)}`;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+// ---------- Location controls (Segnala page) ----------
+document.getElementById('useGpsBtn').addEventListener('click', ()=>{
+  const status = document.getElementById('locStatus');
+  status.textContent = "Rilevamento in corso...";
+  status.style.color = 'var(--inkSoft)';
+  if(!navigator.geolocation){
+    status.textContent = "GPS non disponibile qui — usa 'Scegli sulla mappa'.";
+    status.style.color = 'var(--red)';
+    return;
+  }
+  let answered = false;
+  const silentBlockTimer = setTimeout(()=>{
+    if(answered) return;
+    answered = true;
+    status.textContent = "Il GPS non risponde in questa anteprima — apri il sito direttamente nel browser del telefono, oppure usa 'Scegli sulla mappa'.";
+    status.style.color = 'var(--red)';
+  }, 4000);
+
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      if(answered) return;
+      answered = true;
+      clearTimeout(silentBlockTimer);
+      pendingLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateLocStatus();
+    },
+    (err)=>{
+      if(answered) return;
+      answered = true;
+      clearTimeout(silentBlockTimer);
+      status.textContent = "Posizione non accessibile da qui — tocca 'Scegli sulla mappa' per indicare il punto esatto.";
+      status.style.color = 'var(--red)';
+    },
+    { timeout: 6000 }
+  );
+});
+
+function enterPickMode(){
+  pickModeActive = true;
+  document.getElementById('confirmLocBar').classList.add('show');
+  switchToPage('mappa');
+  updateLocStatus();
+}
+
+document.getElementById('pickMapBtn').addEventListener('click', enterPickMode);
+document.getElementById('changeLocBtn').addEventListener('click', enterPickMode);
+
+document.getElementById('confirmLocBtn').addEventListener('click', ()=>{
+  pickModeActive = false;
+  document.getElementById('confirmLocBar').classList.remove('show');
+  switchToPage('segnala');
+});
+
+document.getElementById('removePinBtn').addEventListener('click', ()=>{
+  // Rimuove il pin restando sulla mappa, senza cambiare pagina.
+  pendingLocation = null;
+  pickModeActive = true; // resta pronto a scegliere un nuovo punto
+  updateLocStatus();
+});
+
+document.getElementById('clearLocBtn').addEventListener('click', ()=>{
+  // Rimuove il pin restando sulla pagina Segnala, senza cambiare pagina.
+  pendingLocation = null;
+  updateLocStatus();
+});
+
+document.getElementById('photoBtn').addEventListener('click', ()=> document.getElementById('photoInput').click());
+document.getElementById('photoInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    pendingFoto = reader.result;
+    const prev = document.getElementById('photoPreview');
+    prev.src = pendingFoto;
+    prev.style.display = 'inline-block';
+    analyzePhoto(pendingFoto);
+  };
+  reader.readAsDataURL(file);
+});
+
+const postTextEl = document.getElementById('postText');
+function refreshPublishBtn(){
+  const btn = document.getElementById('publishBtn');
+  const len = postTextEl.value.length;
+  const counter = document.getElementById('charCount');
+  counter.textContent = len > 0 ? `${len}/500` : '';
+  counter.style.color = len > 450 ? 'var(--red)' : 'var(--inkSoft)';
+  if(postTextEl.value.trim()){ btn.classList.add('active'); }
+  else { btn.classList.remove('active'); }
+}
+postTextEl.addEventListener('input', refreshPublishBtn);
+
+document.getElementById('composer').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const testo = postTextEl.value.trim();
+  if(!testo) return;
+  const loc = pendingLocation || { lat: TOWN_CENTER[0], lng: TOWN_CENTER[1] };
+  const author = currentUser ? currentUser.name : "Tu";
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true;
+
+  const payload = {
+    autore: author,
+    lat: loc.lat, lng: loc.lng,
+    tipo: document.getElementById('tipoSelect').value,
+    testo, foto: pendingFoto,
+    aiMaterial: pendingAnalysis ? pendingAnalysis.material : null,
+    aiCategory: pendingAnalysis ? pendingAnalysis.category : null
+  };
+
+  let post;
+  try{
+    const res = await fetch(`${API_BASE}/posts-create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error("Salvataggio fallito");
+    post = await res.json();
+    post.liked = false;
+  }catch(err){
+    btn.disabled = false;
+    showToast("Errore di connessione: il post non è stato salvato, riprova.");
+    return;
+  }
+
+  posts.unshift(post);
+  postTextEl.value=''; pendingLocation=null; pendingFoto=null; pendingAnalysis=null;
+  document.getElementById('photoPreview').style.display='none';
+  document.getElementById('photoInput').value='';
+  document.getElementById('aiAnalysis').className = '';
+  document.getElementById('aiAnalysis').innerHTML = '';
+  if(pendingMarker && map){ map.removeLayer(pendingMarker); pendingMarker=null; }
+  updateLocStatus(); refreshPublishBtn();
+  btn.disabled = false;
+  renderFeed();
+  attachFeedEvents();
+  if(map) renderMarkers();
+  renderStats();
+  showToast(post.tipo === "Discussione / idea" ? "Discussione pubblicata" : "Segnalazione pubblicata");
+  switchToPage('forum');
+  setTimeout(()=>{
+    const newCard = document.querySelector(`.post[data-id="${post.id}"]`);
+    if(newCard) newCard.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 350);
+});
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    filterStato = chip.dataset.stato;
+    renderFeed();
+    attachFeedEvents();
+  });
+});
+
+function attachFeedEvents(){
+  document.querySelectorAll('.like-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.id;
+      const p = posts.find(x=>x.id===id);
+      const wasLiked = p.liked;
+      // Aggiorniamo subito la grafica (così sembra istantaneo), poi confermiamo col backend.
+      p.liked = !wasLiked;
+      p.like += p.liked ? 1 : -1;
+      renderFeed(); attachFeedEvents();
+      try{
+        const res = await fetch(`${API_BASE}/posts-like`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, direction: p.liked ? 1 : -1 })
+        });
+        if(!res.ok) throw new Error();
+        const data = await res.json();
+        p.like = data.like; // allineiamo al numero reale condiviso
+        renderFeed(); attachFeedEvents();
+      }catch(err){
+        // Connessione assente: annulliamo il like ottimistico
+        p.liked = wasLiked;
+        p.like += p.liked ? 1 : -1;
+        renderFeed(); attachFeedEvents();
+      }
+    });
+  });
+  document.querySelectorAll('.comment-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      document.getElementById('comments-'+id).classList.toggle('show');
+    });
+  });
+  document.querySelectorAll('.comment-send').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.id;
+      const input = document.querySelector(`.comment-input[data-id="${id}"]`);
+      const text = input.value.trim();
+      if(!text) return;
+      const p = posts.find(x=>x.id===id);
+      const author = currentUser ? currentUser.name : "Tu";
+      input.value = '';
+      try{
+        const res = await fetch(`${API_BASE}/posts-comment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, autore: author, testo: text })
+        });
+        if(!res.ok) throw new Error();
+        const data = await res.json();
+        p.commenti = data.commenti; // versione aggiornata e condivisa
+      }catch(err){
+        p.commenti.push({autore:author, testo:text}); // salvataggio fallito: lo mostriamo comunque in locale
+        showToast("Commento non sincronizzato: controlla la connessione.");
+      }
+      renderFeed(); attachFeedEvents();
+      document.getElementById('comments-'+id).classList.add('show');
+    });
+  });
+  document.querySelectorAll('.comment-input').forEach(inp=>{
+    inp.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        document.querySelector(`.comment-send[data-id="${inp.dataset.id}"]`).click();
+      }
+    });
+  });
+}
+
+// ---------- Backend condiviso (Netlify Blobs) ----------
+const API_BASE = "/.netlify/functions";
+
+async function loadPosts(){
+  try{
+    const res = await fetch(`${API_BASE}/posts-list`);
+    if(!res.ok) throw new Error("Risposta non valida dal server");
+    const data = await res.json();
+    posts = data.map(p => ({ ...p, liked: false })); // "liked" resta locale: ricordiamo solo se TU hai messo like in questa sessione
+    postsLoaded = true;
+  }catch(err){
+    console.error("Impossibile caricare i post condivisi:", err);
+    postsLoaded = false;
+  }
+  renderFeed(); attachFeedEvents(); renderStats();
+  if(map) renderMarkers();
+}
+
+// ---------- Init ----------
+renderFeed();
+attachFeedEvents();
+renderStats();
+loadPosts();
+setTimeout(()=>{ initMap(); }, 100);
+
+// ---------- PWA: service worker + banner "Installa l'app" ----------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+function showInstallBanner(){
+  if(document.getElementById('installBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'installBanner';
+  banner.style.cssText = 'position:fixed;bottom:78px;left:16px;right:16px;background:var(--greenDark);color:#fff;padding:12px 14px;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:150;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="msr" style="font-size:20px;">install_mobile</span>
+      <span style="font-size:12.5px;font-weight:700;">Installa San Nicola Pulita sulla home del telefono</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <button id="installBtn" style="background:#fff;color:var(--greenDark);font-family:'Nunito',sans-serif;font-weight:800;font-size:12px;padding:7px 12px;border-radius:999px;border:none;">Installa</button>
+      <button id="dismissInstallBtn" style="background:none;border:none;color:#fff;"><span class="msr" style="font-size:18px;">close</span></button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  document.getElementById('installBtn').addEventListener('click', async ()=>{
+    banner.remove();
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+  });
+  document.getElementById('dismissInstallBtn').addEventListener('click', ()=> banner.remove());
+}
+
+window.addEventListener('appinstalled', ()=>{
+  const b = document.getElementById('installBanner');
+  if(b) b.remove();
+});
+</script>
+</body>
+</html>
