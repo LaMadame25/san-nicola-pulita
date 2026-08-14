@@ -697,6 +697,7 @@ function renderFeed(){
       <div class="post-actions">
         <button class="action-btn like-btn ${p.liked?'liked':''}" data-id="${p.id}"><span class="msr" style="font-size:15px;">favorite</span> ${p.like}</button>
         <button class="action-btn comment-toggle" data-id="${p.id}"><span class="msr" style="font-size:15px;">chat_bubble</span> ${p.commenti.length}</button>
+        ${currentUser && p.autore === currentUser.name ? `<button class="action-btn delete-btn" data-id="${p.id}" style="margin-left:auto;color:#C0392B;"><span class="msr" style="font-size:15px;">delete</span></button>` : ''}
       </div>
       <div class="comments" id="comments-${p.id}">
         ${p.commenti.map(c=>`<div class="comment-item"><b>${escapeHtml(c.autore)}</b> ${escapeHtml(c.testo)}</div>`).join('')}
@@ -1019,6 +1020,30 @@ function attachFeedEvents(){
       if(e.key==='Enter'){
         e.preventDefault();
         document.querySelector(`.comment-send[data-id="${inp.dataset.id}"]`).click();
+      }
+    });
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.dataset.id;
+      if(!confirm("Eliminare questa segnalazione? Non si può annullare.")) return;
+      const author = currentUser ? currentUser.name : "Tu";
+      btn.disabled = true;
+      try{
+        const res = await fetch(`${API_BASE}/posts-delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, autore: author })
+        });
+        if(!res.ok) throw new Error();
+        posts = posts.filter(p => p.id !== id);
+        renderFeed(); attachFeedEvents();
+        if(map) renderMarkers();
+        renderStats();
+        showToast("Segnalazione eliminata");
+      }catch(err){
+        btn.disabled = false;
+        showToast("Errore: eliminazione non riuscita, riprova.");
       }
     });
   });
