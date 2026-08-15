@@ -252,7 +252,7 @@
         <div class="brand-sub">Il social dei rifiuti e dell'ambiente in città</div>
       </div>
     </div>
-    <span id="userBadge"></span>
+    <span id="userBadge" style="cursor:pointer;" title="Tocca per cambiare nome"></span>
     <button id="modBtn" style="display:none;background:none;border:none;color:#fff;cursor:pointer;margin-left:6px;" title="Moderazione"><span class="msr" style="font-size:20px;">shield_person</span></button>
     <button id="logoutBtn" style="display:none;background:none;border:none;color:#fff;cursor:pointer;margin-left:6px;" title="Esci"><span class="msr" style="font-size:20px;">logout</span></button>
   </div>
@@ -566,14 +566,40 @@ function finishLogin(user){
   const roles = (user.app_metadata && user.app_metadata.roles) || [];
   currentUser = { name, icon, email: user.email, isAdmin: roles.includes('admin') };
   document.getElementById('loginOverlay').classList.add('hidden');
-  const badge = document.getElementById('userBadge');
-  badge.innerHTML = `<span class="msr" style="font-size:14px;color:#fff;">${icon}</span> ${escapeHtml(name)}`;
-  badge.classList.add('show');
+  renderUserBadge();
   document.getElementById('logoutBtn').style.display = '';
   if(currentUser.isAdmin) document.getElementById('modBtn').style.display = '';
   loadPosts();
   setTimeout(()=>{ if(map) map.invalidateSize(); }, 100);
 }
+
+function renderUserBadge(){
+  const badge = document.getElementById('userBadge');
+  badge.innerHTML = `<span class="msr" style="font-size:14px;color:#fff;">${currentUser.icon}</span> ${escapeHtml(currentUser.name)}`;
+  badge.classList.add('show');
+}
+
+document.getElementById('userBadge').addEventListener('click', async ()=>{
+  if(!currentUser) return;
+  const newName = prompt('Come vuoi essere chiamato/a?', currentUser.name);
+  if(!newName || !newName.trim() || newName.trim() === currentUser.name) return;
+  const trimmed = newName.trim().slice(0, 30);
+  try{
+    const headers = await authHeaders();
+    const res = await fetch(window.location.origin + '/.netlify/identity/user', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ data: { full_name: trimmed } })
+    });
+    if(!res.ok) throw new Error();
+    currentUser.name = trimmed;
+    renderUserBadge();
+    renderFeed(); attachFeedEvents();
+    showToast('Nome aggiornato');
+  }catch(err){
+    showToast('Errore: nome non aggiornato, riprova.');
+  }
+});
 
 function setAuthMode(mode){
   authMode = mode;
