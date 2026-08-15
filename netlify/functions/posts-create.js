@@ -1,21 +1,29 @@
-import { getStore } from "@netlify/blobs";
+const { getStore } = require("@netlify/blobs");
 
-export default async (req) => {
-  if (req.method !== "POST") {
-    return new Response("Metodo non permesso", { status: 405 });
+exports.handler = async (event, context) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non permesso" }) };
+  }
+
+  const user = context.clientContext && context.clientContext.user;
+  if (!user) {
+    return { statusCode: 401, body: JSON.stringify({ error: "Devi accedere per pubblicare" }) };
   }
 
   try {
-    const body = await req.json();
-    const { autore, lat, lng, tipo, testo, foto, aiMaterial, aiCategory } = body;
+    const body = JSON.parse(event.body || "{}");
+    const { lat, lng, tipo, testo, foto, aiMaterial, aiCategory } = body;
 
     if (!testo || typeof testo !== "string" || !testo.trim()) {
-      return new Response(JSON.stringify({ error: "Testo mancante" }), { status: 400 });
+      return { statusCode: 400, body: JSON.stringify({ error: "Testo mancante" }) };
     }
+
+    const displayName = (user.user_metadata && user.user_metadata.full_name) || user.email.split("@")[0];
 
     const newPost = {
       id: "p" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-      autore: autore && autore.trim() ? autore.trim() : "Anonimo",
+      autore: displayName,
+      authorEmail: user.email,
       lat: typeof lat === "number" ? lat : 41.0500,
       lng: typeof lng === "number" ? lng : 14.3330,
       tipo: tipo || "Discussione / idea",
@@ -23,6 +31,7 @@ export default async (req) => {
       foto: foto || null,
       quando: "adesso",
       stato: "Segnalato",
+      hidden: false,
       like: 0,
       commenti: [],
       aiMaterial: aiMaterial || null,
@@ -35,14 +44,14 @@ export default async (req) => {
     data.unshift(newPost);
     await store.setJSON("all", data);
 
-    return new Response(JSON.stringify(newPost), {
-      status: 201,
-      headers: { "Content-Type": "application/json" }
-    });
+    const { authorEmail, ...toReturn } = newPost;
+    return {
+      statusCode: 201,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...toReturn, isMine: true })
+    };
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
+};
 };
