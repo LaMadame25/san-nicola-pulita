@@ -561,7 +561,9 @@ function showLoginStep(){
   document.getElementById('profileCard').style.display = 'none';
 }
 
-netlifyIdentity.init();
+netlifyIdentity.init({
+  APIUrl: window.location.origin + '/.netlify/identity'
+});
 
 netlifyIdentity.on('init', user=>{
   if(user){
