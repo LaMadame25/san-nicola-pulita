@@ -1,24 +1,25 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
+import { getUser } from "@netlify/identity";
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non permesso" }) };
+export default async (req, context) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Metodo non permesso" }), { status: 405 });
   }
 
-  const user = context.clientContext && context.clientContext.user;
+  const user = await getUser();
   if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Devi accedere per pubblicare" }) };
+    return new Response(JSON.stringify({ error: "Devi accedere per pubblicare" }), { status: 401 });
   }
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    const body = await req.json();
     const { lat, lng, tipo, testo, foto, aiMaterial, aiCategory } = body;
 
     if (!testo || typeof testo !== "string" || !testo.trim()) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Testo mancante" }) };
+      return new Response(JSON.stringify({ error: "Testo mancante" }), { status: 400 });
     }
 
-    const displayName = (user.user_metadata && user.user_metadata.full_name) || user.email.split("@")[0];
+    const displayName = (user.userMetadata && user.userMetadata.full_name) || user.email.split("@")[0];
 
     const newPost = {
       id: "p" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
@@ -45,13 +46,11 @@ exports.handler = async (event, context) => {
     await store.setJSON("all", data);
 
     const { authorEmail, ...toReturn } = newPost;
-    return {
-      statusCode: 201,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...toReturn, isMine: true })
-    };
+    return new Response(JSON.stringify({ ...toReturn, isMine: true }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
-};
 };
