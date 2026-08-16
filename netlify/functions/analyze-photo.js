@@ -1,28 +1,31 @@
 // Funzione serverless Netlify: analizza una foto di rifiuto usando l'API Anthropic.
 // La chiave API resta SOLO sul server (variabile d'ambiente), mai visibile nel browser.
+import { getUser } from "@netlify/identity";
 
-exports.handler = async function (event) {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non consentito" }) };
+export default async (req, context) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Metodo non consentito" }), { status: 405 });
+  }
+
+  const user = await getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Devi accedere per usare l'analisi foto" }), { status: 401 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Chiave API non configurata sul server (variabile ANTHROPIC_API_KEY mancante su Netlify)." })
-    };
+    return new Response(JSON.stringify({ error: "Chiave API non configurata sul server (variabile ANTHROPIC_API_KEY mancante su Netlify)." }), { status: 500 });
   }
 
   try {
-    const { image } = JSON.parse(event.body || "{}");
+    const { image } = await req.json();
     if (!image) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Nessuna immagine ricevuta" }) };
+      return new Response(JSON.stringify({ error: "Nessuna immagine ricevuta" }), { status: 400 });
     }
 
     const match = image.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
     if (!match) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Formato immagine non valido" }) };
+      return new Response(JSON.stringify({ error: "Formato immagine non valido" }), { status: 400 });
     }
     const mediaType = match[1];
     const base64Data = match[2];
@@ -57,11 +60,22 @@ exports.handler = async function (event) {
 
     if (!response.ok) {
       const errText = await response.text();
-      return { statusCode: response.status, body: JSON.stringify({ error: "Errore API Anthropic: " + errText }) };
+      return new Response(JSON.stringify({ error: "Errore API Anthropic: " + errText }), { status: response.status });
     }
 
     const data = await response.json();
     const text = (data.content || []).map((b) => b.text || "").join("").trim();
+    const clean = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+};("").trim();
     const clean = text.replace(/```json|```/g, "").trim();
 
     // Validiamo che sia JSON valido prima di restituirlo
