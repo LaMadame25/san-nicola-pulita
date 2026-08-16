@@ -1,21 +1,22 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
+import { getUser } from "@netlify/identity";
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non permesso" }) };
+export default async (req, context) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Metodo non permesso" }), { status: 405 });
   }
 
-  const user = context.clientContext && context.clientContext.user;
-  const roles = (user && user.app_metadata && user.app_metadata.roles) || [];
+  const user = await getUser();
+  const roles = (user && user.roles) || [];
 
   if (!user || !roles.includes("admin")) {
-    return { statusCode: 403, body: JSON.stringify({ error: "Solo per amministratori" }) };
+    return new Response(JSON.stringify({ error: "Solo per amministratori" }), { status: 403 });
   }
 
   try {
-    const { id, action } = JSON.parse(event.body || "{}");
+    const { id, action } = await req.json();
     if (!id || (action !== "delete" && action !== "restore")) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Parametri non validi" }) };
+      return new Response(JSON.stringify({ error: "Parametri non validi" }), { status: 400 });
     }
 
     const store = getStore({ name: "sannicola-posts", consistency: "strong" });
@@ -30,12 +31,11 @@ exports.handler = async (event, context) => {
 
     await store.setJSON("all", data);
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action })
-    };
+    return new Response(JSON.stringify({ id, action }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
