@@ -550,20 +550,15 @@ document.querySelectorAll('.avatar-pick').forEach(el=>{
 document.querySelector('.avatar-pick').classList.add('selected');
 
 async function authHeaders(){
-  const headers = { 'Content-Type': 'application/json' };
-  try{
-    const user = await window.identity.getUser();
-    if(user && user.token && user.token.access_token){
-      headers['Authorization'] = 'Bearer ' + user.token.access_token;
-    }
-  }catch(e){}
-  return headers;
+  // Con il nuovo sistema Identity, l'accesso viaggia tramite cookie automatici del browser:
+  // non serve più costruire a mano un token da allegare alle richieste.
+  return { 'Content-Type': 'application/json' };
 }
 
 function finishLogin(user){
-  const name = (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
-  const icon = (user.user_metadata && user.user_metadata.icon) || 'eco';
-  const roles = (user.app_metadata && user.app_metadata.roles) || [];
+  const name = (user.userMetadata && user.userMetadata.full_name) || user.email.split('@')[0];
+  const icon = (user.userMetadata && user.userMetadata.icon) || 'eco';
+  const roles = user.roles || [];
   currentUser = { name, icon, email: user.email, isAdmin: roles.includes('admin') };
   document.getElementById('loginOverlay').classList.add('hidden');
   renderUserBadge();
@@ -585,11 +580,10 @@ document.getElementById('userBadge').addEventListener('click', async ()=>{
   if(!newName || !newName.trim() || newName.trim() === currentUser.name) return;
   const trimmed = newName.trim().slice(0, 30);
   try{
-    const headers = await authHeaders();
-    const res = await fetch(window.location.origin + '/.netlify/identity/user', {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify({ data: { full_name: trimmed } })
+    const res = await fetch(`${API_BASE}/update-profile`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ full_name: trimmed })
     });
     if(!res.ok) throw new Error();
     currentUser.name = trimmed;
