@@ -1,49 +1,41 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
+import { getUser } from "@netlify/identity";
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non permesso" }) };
+export default async (req, context) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Metodo non permesso" }), { status: 405 });
   }
 
-  const user = context.clientContext && context.clientContext.user;
+  const user = await getUser();
   if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Devi accedere" }) };
+    return new Response(JSON.stringify({ error: "Devi accedere" }), { status: 401 });
   }
 
   try {
-    const { id } = JSON.parse(event.body || "{}");
+    const { id } = await req.json();
     if (!id) {
-      return { statusCode: 400, body: JSON.stringify({ error: "ID mancante" }) };
+      return new Response(JSON.stringify({ error: "ID mancante" }), { status: 400 });
     }
 
     const store = getStore({ name: "sannicola-posts", consistency: "strong" });
     const data = (await store.get("all", { type: "json" })) || [];
     const post = data.find(p => p.id === id);
     if (!post) {
-      return { statusCode: 404, body: JSON.stringify({ error: "Post non trovato" }) };
+      return new Response(JSON.stringify({ error: "Post non trovato" }), { status: 404 });
     }
 
-    // Confronto sicuro: l'email dell'autore del post deve combaciare con l'email
-    // verificata contenuta nel token di accesso — non un nome scritto a mano dal client.
     if (post.authorEmail !== user.email) {
-      return { statusCode: 403, body: JSON.stringify({ error: "Non sei l'autore di questo post" }) };
+      return new Response(JSON.stringify({ error: "Non sei l'autore di questo post" }), { status: 403 });
     }
 
     const newData = data.filter(p => p.id !== id);
     await store.setJSON("all", newData);
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deleted: id })
-    };
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
-  }
-};
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
+    return new Response(JSON.stringify({ deleted: id }), {
+      status: 200,
       headers: { "Content-Type": "application/json" }
     });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
