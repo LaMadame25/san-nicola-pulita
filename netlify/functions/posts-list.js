@@ -1,7 +1,7 @@
 
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
+import { getUser } from "@netlify/identity";
 
-// Post "di partenza" — servono solo a non mostrare un'app vuota al primissimo avvio.
 const SEED_POSTS = [
   {
     id: "p1", autore: "Marco89", authorEmail: null,
@@ -29,7 +29,7 @@ const SEED_POSTS = [
   }
 ];
 
-exports.handler = async (event, context) => {
+export default async (req, context) => {
   try {
     const store = getStore({ name: "sannicola-posts", consistency: "strong" });
     let data = await store.get("all", { type: "json" });
@@ -39,7 +39,8 @@ exports.handler = async (event, context) => {
       await store.setJSON("all", data);
     }
 
-    const requester = context.clientContext && context.clientContext.user;
+    let requester = null;
+    try { requester = await getUser(); } catch (e) {}
 
     const visible = data
       .filter(p => !p.hidden)
@@ -48,13 +49,11 @@ exports.handler = async (event, context) => {
         return { ...rest, isMine: !!(requester && authorEmail && authorEmail === requester.email) };
       });
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(visible)
-    };
+    return new Response(JSON.stringify(visible), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
-};
 };
