@@ -1,26 +1,27 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
+import { getUser } from "@netlify/identity";
 
-exports.handler = async (event, context) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Metodo non permesso" }) };
+export default async (req, context) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Metodo non permesso" }), { status: 405 });
   }
 
-  const user = context.clientContext && context.clientContext.user;
+  const user = await getUser();
   if (!user) {
-    return { statusCode: 401, body: JSON.stringify({ error: "Devi accedere" }) };
+    return new Response(JSON.stringify({ error: "Devi accedere" }), { status: 401 });
   }
 
   try {
-    const { id, motivo } = JSON.parse(event.body || "{}");
+    const { id, motivo } = await req.json();
     if (!id) {
-      return { statusCode: 400, body: JSON.stringify({ error: "ID mancante" }) };
+      return new Response(JSON.stringify({ error: "ID mancante" }), { status: 400 });
     }
 
     const store = getStore({ name: "sannicola-posts", consistency: "strong" });
     const data = (await store.get("all", { type: "json" })) || [];
     const post = data.find(p => p.id === id);
     if (!post) {
-      return { statusCode: 404, body: JSON.stringify({ error: "Post non trovato" }) };
+      return new Response(JSON.stringify({ error: "Post non trovato" }), { status: 404 });
     }
 
     post.hidden = true;
@@ -28,12 +29,11 @@ exports.handler = async (event, context) => {
     post.reports.push({ by: user.email, motivo: motivo || "", at: Date.now() });
     await store.setJSON("all", data);
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, hidden: true })
-    };
+    return new Response(JSON.stringify({ id, hidden: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
