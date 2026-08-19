@@ -102,10 +102,20 @@
   .avatar.sm{width:36px;height:36px;font-size:16px;}
   textarea, input[type=text], input[type=email], input[type=password]{border:none;outline:none;font-size:16px;width:100%;font-family:'Work Sans',sans-serif;background:transparent;color:var(--ink);}
   #postText{resize:none;padding:8px 0;}
-  .loc-row{margin-left:50px;margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .loc-row{margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .loc-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);}
   .loc-set{background:var(--greenSoft);color:var(--greenDark);border-color:var(--greenSoft);}
-  .composer-controls{display:flex;align-items:center;justify-content:space-between;margin-top:10px;margin-left:50px;flex-wrap:wrap;gap:8px;}
+  .composer-card{padding:18px;}
+  .compose-hero{font-size:22px;font-weight:900;margin:2px 0 4px;line-height:1.15;}
+  .compose-sub{font-size:12.5px;color:var(--inkSoft);margin:0 0 16px;}
+  .photo-tile{width:100%;border:2px dashed var(--line);border-radius:14px;padding:22px 10px;text-align:center;color:var(--inkSoft);cursor:pointer;background:var(--bg);margin-bottom:14px;position:relative;overflow:hidden;min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .photo-tile:active{border-color:var(--green);background:var(--greenSoft);}
+  .photo-tile-icon{font-size:28px;color:var(--green);}
+  .photo-tile-label{font-size:12.5px;font-weight:700;margin-top:6px;}
+  .photo-tile.has-photo .photo-tile-icon, .photo-tile.has-photo .photo-tile-label{display:none;}
+  .photo-tile img{display:none;width:100%;max-height:180px;object-fit:cover;border-radius:10px;}
+  .compose-textarea{border:1.5px solid var(--line);border-radius:12px;background:var(--bg);padding:11px 12px;min-height:70px;margin-bottom:2px;}
+  .cta-hint{text-align:center;font-size:11px;color:var(--inkSoft);margin-top:8px;}
   select{font-size:16px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);}
   .tipo-chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-left:50px;margin-top:10px;}
   .tipo-chip{border-radius:999px;padding:6px 12px;font-size:11.5px;font-weight:700;border:1.5px solid var(--line);cursor:pointer;background:var(--card);color:var(--inkSoft);display:flex;align-items:center;gap:5px;}
@@ -161,19 +171,24 @@
   .zone-rank-count{font-size:11px;color:var(--inkSoft);}
   .stats-empty{text-align:center;font-size:13px;color:var(--inkSoft);padding:30px 0;}
   .demo-banner{background:#FDECC8;border:1px solid #E8C877;color:#7A5A0A;font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:10px;margin-bottom:14px;text-align:center;}
-  .publish-btn{font-family:'Titillium Web',sans-serif;font-size:12px;font-weight:800;padding:9px 18px;border-radius:999px;background:#C9D6C4;color:#fff;display:flex;align-items:center;gap:5px;}
-  .publish-btn.active{background:var(--green);cursor:pointer;}
+  .publish-btn{width:100%;margin-top:14px;font-family:'Titillium Web',sans-serif;font-size:15px;font-weight:800;padding:14px;border-radius:14px;border:none;background:#C9D6C4;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .publish-btn.active{background:var(--green);cursor:pointer;box-shadow:0 8px 20px -10px var(--green);}
 
   /* Forum page */
   .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .filter-label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--inkSoft);}
   .chip{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:var(--card);color:var(--inkSoft);cursor:pointer;}
   .chip.active{background:var(--greenDark);color:#fff;border-color:var(--greenDark);}
-  .post{margin-top:22px;position:relative;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:20px 16px 16px;box-shadow:0 8px 20px -12px rgba(0,0,0,.18);}
+  .post{margin-top:24px;position:relative;background:var(--card);border:1px solid var(--line);border-radius:4px;padding:22px 16px 16px;box-shadow:0 8px 20px -12px rgba(0,0,0,.18);}
   .post::before{content:"";position:absolute;top:-7px;left:0;right:0;height:14px;
     background-image:radial-gradient(circle at 9px 7px, var(--bg) 7px, transparent 7.4px);
     background-size:18px 14px;background-repeat:repeat-x;background-position:left top;}
-  .post-top{display:flex;align-items:center;gap:10px;}
+  .stamp-corner{position:absolute;top:14px;right:14px;border:2px solid var(--red);color:var(--red);border-radius:8px;padding:3px 9px;font-family:'Titillium Web';font-weight:900;font-size:10px;letter-spacing:.5px;text-transform:uppercase;transform:rotate(5deg);background:var(--card);}
+  .stamp-corner.in-carico{border-color:var(--amber);color:var(--amber);}
+  .stamp-corner.risolto{border-color:var(--green);color:var(--green);}
+  select.stamp-corner{cursor:pointer;}
+  .r-dash{border:none;border-top:1.5px dashed var(--line);margin:14px 0 10px;}
+  .post-top{display:flex;align-items:center;gap:10px;padding-right:74px;}
   .post-name{font-weight:800;font-size:14px;}
   .post-time{font-size:12px;color:var(--inkSoft);}
   .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;}
@@ -296,20 +311,17 @@
   <!-- PAGE 1: SEGNALA -->
   <section class="page" data-page="segnala">
     <div class="page-inner">
-      <form class="card" id="composer">
-        <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Nuova segnalazione o discussione</div>
-        <div class="composer-row">
-          <div class="avatar"><span class="msr" style="color:var(--green);">eco</span></div>
-          <textarea id="postText" rows="3" maxlength="500" placeholder="Cosa hai notato in città? Racconta ai vicini..."></textarea>
-        </div>
-        <div style="margin-left:50px;font-size:11px;color:var(--inkSoft);text-align:right;" id="charCount"></div>
-        <div class="loc-row">
-          <button type="button" class="loc-btn pop" id="useGpsBtn"><span class="msr" style="font-size:14px;">my_location</span> Usa la mia posizione</button>
-          <button type="button" class="loc-btn pop" id="pickMapBtn"><span class="msr" style="font-size:14px;">map</span> Scegli sulla mappa</button>
-          <button type="button" id="changeLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">edit</span> Cambia</button>
-          <button type="button" id="clearLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">close</span></button>
-        </div>
-        <div style="margin-left:50px;font-size:11px;margin-top:4px;" id="locStatus"></div>
+      <form class="card composer-card" id="composer">
+        <div class="disp compose-hero">Hai visto un problema?</div>
+        <p class="compose-sub">Foto, posizione, fatto. Il Comune lo vede subito.</p>
+
+        <button type="button" class="photo-tile" id="photoBtn">
+          <img id="photoPreview" style="display:none;" />
+          <span class="msr photo-tile-icon">photo_camera</span>
+          <div class="photo-tile-label">Scatta o carica una foto</div>
+        </button>
+        <input type="file" id="photoInput" accept="image/*" style="display:none;" />
+
         <div class="tipo-chip-row" id="tipoChipRow">
           <button type="button" class="tipo-chip active" data-c="organico" data-val="Rifiuti ingombranti"><span class="dot" style="background:var(--organico);"></span>Ingombranti</button>
           <button type="button" class="tipo-chip" data-c="discarica" data-val="Discarica abusiva"><span class="dot" style="background:var(--red);"></span>Discarica</button>
@@ -317,22 +329,29 @@
           <button type="button" class="tipo-chip" data-c="pericoloso" data-val="Materiale pericoloso"><span class="dot" style="background:var(--indiff);"></span>Pericoloso</button>
           <button type="button" class="tipo-chip" data-c="idea" data-val="Discussione / idea"><span class="dot" style="background:var(--plastica);"></span>Discussione/Idea</button>
         </div>
-        <div class="composer-controls">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <select id="tipoSelect" style="display:none;">
-              <option>Rifiuti ingombranti</option>
-              <option>Discarica abusiva</option>
-              <option>Cassonetti pieni</option>
-              <option>Materiale pericoloso</option>
-              <option>Discussione / idea</option>
-            </select>
-            <button type="button" class="file-btn pop" id="photoBtn"><span class="msr" style="font-size:14px;">photo_camera</span> Foto</button>
-            <input type="file" id="photoInput" accept="image/*" style="display:none;" />
-            <img id="photoPreview" style="display:none;width:32px;height:32px;border-radius:6px;object-fit:cover;" />
-          </div>
-          <button type="submit" class="publish-btn" id="publishBtn">Pubblica <span class="msr" style="font-size:14px;color:#fff;">send</span></button>
+        <select id="tipoSelect" style="display:none;">
+          <option>Rifiuti ingombranti</option>
+          <option>Discarica abusiva</option>
+          <option>Cassonetti pieni</option>
+          <option>Materiale pericoloso</option>
+          <option>Discussione / idea</option>
+        </select>
+
+        <textarea id="postText" class="compose-textarea" rows="3" maxlength="500" placeholder="Cosa hai notato in città? Racconta ai vicini..."></textarea>
+        <div style="font-size:11px;color:var(--inkSoft);text-align:right;" id="charCount"></div>
+
+        <div class="loc-row">
+          <button type="button" class="loc-btn pop" id="useGpsBtn"><span class="msr" style="font-size:14px;">my_location</span> Usa la mia posizione</button>
+          <button type="button" class="loc-btn pop" id="pickMapBtn"><span class="msr" style="font-size:14px;">map</span> Scegli sulla mappa</button>
+          <button type="button" id="changeLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">edit</span> Cambia</button>
+          <button type="button" id="clearLocBtn" class="loc-btn pop" style="display:none;"><span class="msr" style="font-size:14px;">close</span></button>
         </div>
+        <div style="font-size:11px;margin-top:4px;" id="locStatus"></div>
+
         <div id="aiAnalysis"></div>
+
+        <button type="submit" class="publish-btn" id="publishBtn">Pubblica segnalazione <span class="msr" style="font-size:15px;color:#fff;">send</span></button>
+        <div class="cta-hint">Il tuo Comune vedrà la posizione esatta e potrà intervenire</div>
       </form>
     </div>
   </section>
@@ -982,25 +1001,26 @@ function renderFeed(){
   }
   feed.innerHTML = visible.map(p => `
     <div class="card post" data-id="${p.id}">
+      ${p.tipo === "Discussione / idea"
+        ? `<span class="stamp-corner" style="color:#5B4FC4;border-color:#5B4FC4;"><span class="msr" style="font-size:11px;vertical-align:-1px;">forum</span> Discussione</span>`
+        : (currentUser && currentUser.isAdmin
+            ? `<select class="stamp-corner stato-select ${STATO_CLASS[p.stato]}" data-id="${p.id}">
+                ${STATI.map(s => `<option value="${s}" ${s===p.stato?'selected':''}>${s}</option>`).join('')}
+               </select>`
+            : `<span class="stamp-corner stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`)}
       <div class="post-top">
         <div class="avatar sm">${avatarIconHtml(p.autore, 'var(--greenDark)')}</div>
         <div>
           <div><span class="post-name disp">${p.autore}</span> <span class="post-time">· ${p.quando}</span></div>
           <div class="tag-row">
             <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${p.via || nearestZoneLabel(p.lat,p.lng)}</span>
-            ${p.tipo === "Discussione / idea"
-              ? `<span class="tag" style="background:#E4DEF7;color:#5B4FC4;"><span class="msr" style="font-size:11px;vertical-align:-1px;">forum</span> Discussione</span>`
-              : (currentUser && currentUser.isAdmin
-                  ? `<select class="tag stato-select ${STATO_CLASS[p.stato]}" data-id="${p.id}" style="border:none;font-weight:800;cursor:pointer;">
-                      ${STATI.map(s => `<option value="${s}" ${s===p.stato?'selected':''}>${s}</option>`).join('')}
-                     </select>`
-                  : `<span class="tag stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`)}
           </div>
         </div>
       </div>
       <div class="post-text">${escapeHtml(p.testo)}</div>
       ${p.foto ? `<img class="post-photo" src="${p.foto}" />` : ''}
       ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--greenDark);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
+      <hr class="r-dash" />
       <div class="post-actions">
         <button class="action-btn like-btn ${p.liked?'liked':''}" data-id="${p.id}"><span class="msr" style="font-size:15px;">favorite</span> ${p.like}</button>
         <button class="action-btn comment-toggle" data-id="${p.id}"><span class="msr" style="font-size:15px;">chat_bubble</span> ${p.commenti.length}</button>
@@ -1180,7 +1200,8 @@ document.getElementById('photoInput').addEventListener('change', (e)=>{
     pendingFoto = reader.result;
     const prev = document.getElementById('photoPreview');
     prev.src = pendingFoto;
-    prev.style.display = 'inline-block';
+    prev.style.display = 'block';
+    document.getElementById('photoBtn').classList.add('has-photo');
     analyzePhoto(pendingFoto);
   };
   reader.readAsDataURL(file);
@@ -1236,6 +1257,7 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
   posts.unshift(post);
   postTextEl.value=''; pendingLocation=null; pendingFoto=null; pendingAnalysis=null;
   document.getElementById('photoPreview').style.display='none';
+  document.getElementById('photoBtn').classList.remove('has-photo');
   document.getElementById('photoInput').value='';
   document.getElementById('aiAnalysis').className = '';
   document.getElementById('aiAnalysis').innerHTML = '';
