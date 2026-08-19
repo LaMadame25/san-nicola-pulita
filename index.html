@@ -416,6 +416,26 @@ function nearestZoneLabel(lat, lng){
   return best || "San Nicola la Strada";
 }
 
+// Nome vero della via tramite reverse geocoding (OpenStreetMap Nominatim).
+// Se l'API non risponde (offline, errore, rate limit) torniamo al vecchio sistema a zone fisse.
+const geoCache = {};
+async function reverseGeocode(lat, lng){
+  const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  if(geoCache[key]) return geoCache[key];
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`);
+    if(!res.ok) throw new Error();
+    const data = await res.json();
+    const addr = data.address || {};
+    const via = addr.road || addr.pedestrian || addr.residential || null;
+    const label = via || nearestZoneLabel(lat, lng);
+    geoCache[key] = label;
+    return label;
+  }catch(err){
+    return nearestZoneLabel(lat, lng);
+  }
+}
+
 const AVATARS = ["eco","park","forest","local_florist","grass"];
 function avatarFor(str){
   let h=0; for(let i=0;i<str.length;i++) h+=str.charCodeAt(i);
@@ -896,7 +916,7 @@ function renderFeed(){
         <div>
           <div><span class="post-name disp">${p.autore}</span> <span class="post-time">· ${p.quando}</span></div>
           <div class="tag-row">
-            <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${nearestZoneLabel(p.lat,p.lng)}</span>
+            <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${p.via || nearestZoneLabel(p.lat,p.lng)}</span>
             ${p.tipo === "Discussione / idea"
               ? `<span class="tag" style="background:#E4DEF7;color:#5B4FC4;"><span class="msr" style="font-size:11px;vertical-align:-1px;">forum</span> Discussione</span>`
               : `<span class="tag stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`}
@@ -950,7 +970,7 @@ function renderStats(){
 
   const countZona = {};
   posts.forEach(p => {
-    const z = nearestZoneLabel(p.lat, p.lng);
+    const z = p.via || nearestZoneLabel(p.lat, p.lng);
     countZona[z] = (countZona[z]||0) + 1;
   });
   const zoneSorted = Object.entries(countZona).sort((a,b) => b[1]-a[1]);
@@ -1111,8 +1131,10 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
   const btn = document.getElementById('publishBtn');
   btn.disabled = true;
 
+  const via = await reverseGeocode(loc.lat, loc.lng);
+
   const payload = {
-    lat: loc.lat, lng: loc.lng,
+    lat: loc.lat, lng: loc.lng, via,
     tipo: document.getElementById('tipoSelect').value,
     testo, foto: pendingFoto,
     aiMaterial: pendingAnalysis ? pendingAnalysis.material : null,
@@ -1351,6 +1373,34 @@ window.addEventListener('appinstalled', ()=>{
   const b = document.getElementById('installBanner');
   if(b) b.remove();
 });
+
+// iOS (Safari e ogni browser su iOS, che usano tutti WebKit) non genera mai
+// l'evento beforeinstallprompt: bisogna mostrare istruzioni manuali.
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+
+if(isIOS() && !isStandalone() && !localStorage.getItem('iosInstallDismissed')){
+  showIOSInstallBanner();
+}
+
+function showIOSInstallBanner(){
+  if(document.getElementById('installBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'installBanner';
+  banner.style.cssText = 'position:fixed;bottom:78px;left:16px;right:16px;background:var(--greenDark);color:#fff;padding:12px 14px;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:150;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="msr" style="font-size:20px;">ios_share</span>
+      <span style="font-size:12px;font-weight:700;">Tocca <b>Condividi</b>, poi <b>Aggiungi a Home</b> per installare</span>
+    </div>
+    <button id="dismissIOSBtn" style="background:none;border:none;color:#fff;flex-shrink:0;"><span class="msr" style="font-size:18px;">close</span></button>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById('dismissIOSBtn').addEventListener('click', ()=>{
+    banner.remove();
+    localStorage.setItem('iosInstallDismissed', '1');
+  });
+}
 </script>
 </body>
 </html>
