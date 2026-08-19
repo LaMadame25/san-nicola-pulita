@@ -919,7 +919,11 @@ function renderFeed(){
             <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${p.via || nearestZoneLabel(p.lat,p.lng)}</span>
             ${p.tipo === "Discussione / idea"
               ? `<span class="tag" style="background:#E4DEF7;color:#5B4FC4;"><span class="msr" style="font-size:11px;vertical-align:-1px;">forum</span> Discussione</span>`
-              : `<span class="tag stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`}
+              : (currentUser && currentUser.isAdmin
+                  ? `<select class="tag stato-select ${STATO_CLASS[p.stato]}" data-id="${p.id}" style="border:none;font-weight:800;cursor:pointer;">
+                      ${STATI.map(s => `<option value="${s}" ${s===p.stato?'selected':''}>${s}</option>`).join('')}
+                     </select>`
+                  : `<span class="tag stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`)}
           </div>
         </div>
       </div>
@@ -1151,6 +1155,7 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
     if(!res.ok) throw new Error("Salvataggio fallito");
     post = await res.json();
     post.liked = false;
+    post.isMine = true; // appena creato: è sicuramente nostro, non serve aspettare il reload
   }catch(err){
     btn.disabled = false;
     showToast("Errore di connessione: il post non è stato salvato, riprova.");
@@ -1253,6 +1258,31 @@ function attachFeedEvents(){
       if(e.key==='Enter'){
         e.preventDefault();
         document.querySelector(`.comment-send[data-id="${inp.dataset.id}"]`).click();
+      }
+    });
+  });
+  document.querySelectorAll('.stato-select').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const id = sel.dataset.id;
+      const nuovoStato = sel.value;
+      sel.disabled = true;
+      try{
+        const res = await fetch(`${API_BASE}/posts-update-status`, {
+          method: 'POST',
+          headers: await authHeaders(),
+          body: JSON.stringify({ id, stato: nuovoStato })
+        });
+        if(!res.ok) throw new Error();
+        const p = posts.find(x=>x.id===id);
+        if(p) p.stato = nuovoStato;
+        if(map) renderMarkers();
+        renderStats();
+        showToast("Stato aggiornato");
+      }catch(err){
+        showToast("Errore: aggiornamento stato non riuscito.");
+        renderFeed(); attachFeedEvents(); // torniamo allo stato precedente visivamente
+      }finally{
+        sel.disabled = false;
       }
     });
   });
