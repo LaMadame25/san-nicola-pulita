@@ -77,9 +77,9 @@
   #pagesContainer{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
   .page{flex:0 0 100%;scroll-snap-align:start;height:100%;overflow-y:auto;overflow-x:hidden;position:relative;}
   .page-inner{max-width:640px;margin:0 auto;padding:16px 16px 90px;}
-  [data-page="segnala"]{display:flex;flex-direction:column;justify-content:center;}
-  [data-page="segnala"] .page-inner{padding-top:16px;padding-bottom:16px;}
-  [data-page="segnala"] .composer-card{width:100%;}
+  [data-page="segnala"]{display:flex;flex-direction:column;}
+  [data-page="segnala"] .page-inner{display:flex;flex-direction:column;flex:1;padding-top:16px;padding-bottom:16px;}
+  [data-page="segnala"] .composer-card{width:100%;flex:1;display:flex;flex-direction:column;}
 
   .pop{transition:transform .12s ease;cursor:pointer;border:none;}
   .pop:active{transform:scale(0.94);}
@@ -347,7 +347,7 @@
 
         <div id="aiAnalysis"></div>
 
-        <button type="submit" class="publish-btn" id="publishBtn">Pubblica segnalazione <span class="msr" style="font-size:15px;color:#fff;">send</span></button>
+        <button type="submit" class="publish-btn" id="publishBtn" style="margin-top:auto;">Pubblica segnalazione <span class="msr" style="font-size:15px;color:#fff;">send</span></button>
         <div class="cta-hint">Il tuo Comune vedrà la posizione esatta e potrà intervenire</div>
       </form>
     </div>
