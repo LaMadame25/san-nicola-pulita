@@ -1115,12 +1115,12 @@ function renderStats(){
   `;
 }
 
-function showToast(msg){
+function showToast(msg, duration = 2200){
   const t = document.getElementById('toast');
   t.innerHTML = `<span class="msr" style="font-size:15px;vertical-align:-2px;color:#fff;">check_circle</span> ${escapeHtml(msg)}`;
   t.classList.add('show');
   clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(()=> t.classList.remove('show'), 2200);
+  showToast._timer = setTimeout(()=> t.classList.remove('show'), duration);
 }
 
 // ---------- Location controls (Segnala page) ----------
@@ -1273,13 +1273,19 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
       headers: await authHeaders(),
       body: JSON.stringify(payload)
     });
-    if(!res.ok) throw new Error("Salvataggio fallito");
+    if(!res.ok){
+      let detail = '';
+      try{ const errBody = await res.json(); detail = errBody.error || ''; }catch(e){}
+      throw new Error(`HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
+    }
     post = await res.json();
     post.liked = false;
     post.isMine = true; // appena creato: è sicuramente nostro, non serve aspettare il reload
   }catch(err){
     btn.disabled = false;
-    showToast("Errore di connessione: il post non è stato salvato, riprova.");
+    // Messaggio diagnostico temporaneo: mostra la causa reale invece di un errore generico,
+    // per capire cosa blocca il salvataggio (dimensione foto, autenticazione, server, ecc.)
+    showToast(`Errore: ${err.message || 'connessione fallita'} — riprova.`, 5000);
     return;
   }
 
