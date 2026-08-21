@@ -32,14 +32,14 @@
 <style>
   :root{
     --bg:#F3F1EA; --card:#FFFFFF; --ink:#1C201B; --inkSoft:#5C6156;
-    --green:#1E5B3D; --greenDark:#123825; --greenSoft:#E4EEE4;
+    --green:#1E5B3D; --greenDark:#123825; --greenSoft:#E4EEE4; --accentText:#123825;
     --amber:#B4841F; --amberSoft:#F3E7D0; --red:#B5541B; --redSoft:#F3DDCC;
     --line:rgba(28,32,27,.14);
     --organico:#8B5E34; --plastica:#2C6FBF; --carta:#C9962C; --vetro:#2A7A55; --indiff:#6B6F68;
   }
   html[data-theme="dark"]{
     --bg:#14170F; --card:#1C2016; --ink:#F1EFE6; --inkSoft:#A7AC9E;
-    --green:#5CC98C; --greenDark:#1B3B29; --greenSoft:#22301F;
+    --green:#5CC98C; --greenDark:#1B3B29; --greenSoft:#22301F; --accentText:#5CC98C;
     --amber:#E0B24F; --amberSoft:#332B18; --red:#E07A3F; --redSoft:#332019;
     --line:rgba(241,239,230,.14);
     --organico:#C08B58; --plastica:#6FA3E8; --carta:#E3B94F; --vetro:#5CBE8F; --indiff:#9EA396;
@@ -100,7 +100,7 @@
   #postText{resize:none;padding:8px 0;}
   .loc-row{margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .loc-btn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);}
-  .loc-set{background:var(--greenSoft);color:var(--greenDark);border-color:var(--greenSoft);}
+  .loc-set{background:var(--greenSoft);color:var(--accentText);border-color:var(--greenSoft);}
   .composer-card{padding:18px;}
   .compose-hero{font-size:22px;font-weight:900;margin:2px 0 4px;line-height:1.15;}
   .compose-sub{font-size:12.5px;color:var(--inkSoft);margin:0 0 16px;}
@@ -110,9 +110,11 @@
   .photo-tile-label{font-size:12.5px;font-weight:700;margin-top:6px;}
   .photo-tile.has-photo .photo-tile-icon, .photo-tile.has-photo .photo-tile-label{display:none;}
   .photo-tile img{display:none;width:100%;max-height:180px;object-fit:cover;border-radius:10px;}
+  .photo-remove-btn{display:none;position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;align-items:center;justify-content:center;border:none;z-index:2;}
+  .photo-tile.has-photo .photo-remove-btn{display:flex;}
   .compose-textarea{border:1.5px solid var(--line);border-radius:12px;background:var(--bg);padding:11px 12px;min-height:70px;margin-bottom:2px;}
   .cta-hint{text-align:center;font-size:11px;color:var(--inkSoft);margin-top:8px;}
-  .segnala-stat{margin-top:18px;background:var(--greenSoft);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--greenDark);}
+  .segnala-stat{margin-top:18px;background:var(--greenSoft);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--accentText);}
   html[data-theme="dark"] .segnala-stat{color:var(--green);}
   .segnala-stat b{font-family:'Titillium Web';font-weight:900;font-size:16px;}
   select{font-size:16px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);}
@@ -132,8 +134,8 @@
   #aiAnalysis.loading{background:var(--bg);}
   .ai-spin{display:inline-block;width:12px;height:12px;border:2px solid var(--inkSoft);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:-1px;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .ai-material{font-weight:800;font-size:13px;color:var(--greenDark);}
-  .ai-cat-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--card);color:var(--greenDark);margin-left:6px;}
+  .ai-material{font-weight:800;font-size:13px;color:var(--accentText);}
+  .ai-cat-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--card);color:var(--accentText);margin-left:6px;}
   .ai-guide{font-size:12px;color:var(--ink);margin-top:6px;line-height:1.5;}
   .ai-contacts{font-size:11px;color:var(--inkSoft);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);}
   .ai-error{font-size:12px;color:var(--red);}
@@ -148,13 +150,13 @@
   .cal-text{flex:1;min-width:0;}
   .cal-mat{font-weight:800;color:var(--ink);font-size:13.5px;line-height:1.3;}
   .cal-day{color:var(--inkSoft);font-size:11.5px;margin-top:2px;}
-  .cal-day b{color:var(--greenDark);font-weight:700;}
+  .cal-day b{color:var(--accentText);font-weight:700;}
   .cal-rules{font-size:11.5px;color:var(--inkSoft);margin-top:10px;line-height:1.6;padding-top:10px;border-top:1px solid var(--line);}
 
   /* Statistiche page */
   .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .stat-box{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 3px rgba(31,77,44,.08);}
-  .stat-num{font-family:'Titillium Web',sans-serif;font-weight:800;font-size:22px;color:var(--greenDark);}
+  .stat-num{font-family:'Titillium Web',sans-serif;font-weight:800;font-size:22px;color:var(--accentText);}
   .stat-label{font-size:10px;color:var(--inkSoft);font-weight:700;text-transform:uppercase;margin-top:2px;}
   .section-title{font-family:'Titillium Web',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;color:var(--inkSoft);margin:20px 0 10px;}
   .bar-row{margin-bottom:10px;}
@@ -191,7 +193,7 @@
   .post-name{font-weight:800;font-size:14px;}
   .post-time{font-size:12px;color:var(--inkSoft);}
   .tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;}
-  .tag{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:800;background:var(--greenSoft);color:var(--greenDark);}
+  .tag{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:800;background:var(--greenSoft);color:var(--accentText);}
   .tag.stato{border:1.5px solid var(--red);color:var(--red);background:none;font-family:'Titillium Web';font-weight:900;text-transform:uppercase;letter-spacing:.4px;transform:rotate(-2deg);border-radius:6px;}
   .tag.stato.in-carico{border-color:var(--amber);color:var(--amber);}
   .tag.stato.risolto{border-color:var(--green);color:var(--green);}
@@ -269,7 +271,7 @@
     <input type="password" id="authPassword" class="login-input" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password" />
 
     <div id="authError" style="display:none;color:#C0392B;font-size:13px;margin:6px 0 0;text-align:center;"></div>
-    <div id="authInfo" style="display:none;color:var(--greenDark);font-size:13px;margin:6px 0 0;text-align:center;"></div>
+    <div id="authInfo" style="display:none;color:var(--accentText);font-size:13px;margin:6px 0 0;text-align:center;"></div>
 
     <button class="login-btn active" id="authSubmitBtn">Accedi</button>
     <div class="login-note" id="authToggleNote">Non hai un account? <a href="#" id="authToggleLink" style="color:var(--green);font-weight:700;">Registrati</a></div>
@@ -312,11 +314,12 @@
         <div class="disp compose-hero">Hai visto un problema?</div>
         <p class="compose-sub">Foto, posizione, fatto. Il Comune lo vede subito.</p>
 
-        <button type="button" class="photo-tile" id="photoBtn">
+        <div class="photo-tile" id="photoBtn">
           <img id="photoPreview" style="display:none;" />
+          <button type="button" class="photo-remove-btn" id="removePhotoBtn" aria-label="Rimuovi foto"><span class="msr" style="font-size:16px;">close</span></button>
           <span class="msr photo-tile-icon">photo_camera</span>
           <div class="photo-tile-label">Scatta o carica una foto</div>
-        </button>
+        </div>
         <input type="file" id="photoInput" accept="image/*" style="display:none;" />
 
         <div class="tipo-chip-row" id="tipoChipRow">
@@ -360,27 +363,27 @@
       <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Calendario raccolta differenziata</div>
       <div class="card" style="margin-top:0;">
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">compost</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">compost</span></div>
           <div class="cal-text"><div class="cal-mat">Organico</div><div class="cal-day">Esponi <b>domenica sera</b> · raccolta lunedì</div></div>
         </div>
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">description</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">description</span></div>
           <div class="cal-text"><div class="cal-mat">Carta, Cartone e Tetrapak</div><div class="cal-day">Esponi <b>lunedì sera</b> · raccolta martedì</div></div>
         </div>
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">delete</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">delete</span></div>
           <div class="cal-text"><div class="cal-mat">Indifferenziato + Organico</div><div class="cal-day">Esponi <b>martedì sera</b> · raccolta mercoledì</div></div>
         </div>
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">liquor</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">liquor</span></div>
           <div class="cal-text"><div class="cal-mat">Vetro</div><div class="cal-day">Esponi <b>mercoledì sera</b> · raccolta giovedì</div></div>
         </div>
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">recycling</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">recycling</span></div>
           <div class="cal-text"><div class="cal-mat">Plastica e Metalli</div><div class="cal-day">Esponi <b>giovedì sera</b> · raccolta venerdì</div></div>
         </div>
         <div class="cal-row">
-          <div class="cal-icon"><span class="msr" style="color:var(--greenDark);">compost</span></div>
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">compost</span></div>
           <div class="cal-text"><div class="cal-mat">Organico</div><div class="cal-day">Esponi <b>venerdì sera</b> · raccolta sabato</div></div>
         </div>
         <div class="cal-rules">
@@ -526,7 +529,7 @@ function avatarFor(str){
   return AVATARS[h % AVATARS.length];
 }
 function avatarIconHtml(str, color){
-  return `<span class="msr" style="color:${color || 'var(--greenDark)'};">${avatarFor(str)}</span>`;
+  return `<span class="msr" style="color:${color || 'var(--accentText)'};">${avatarFor(str)}</span>`;
 }
 
 // I post NON sono più fissi qui dentro: arrivano dal backend condiviso (Netlify Blobs),
@@ -626,7 +629,7 @@ async function analyzePhoto(base64DataUrl){
     box.innerHTML = `
       <div><span class="ai-material"><span class="msr" style="font-size:14px;vertical-align:-2px;">search</span> ${escapeHtml(pendingAnalysis.material)}</span><span class="ai-cat-badge"><span class="msr" style="font-size:12px;vertical-align:-2px;">${guide.icon}</span> ${guide.label}</span></div>
       <div class="ai-guide">${guide.guida}</div>
-      ${nextDay ? `<div class="ai-guide" style="font-weight:800;color:var(--greenDark);">${nextDay}</div>` : ''}
+      ${nextDay ? `<div class="ai-guide" style="font-weight:800;color:var(--accentText);">${nextDay}</div>` : ''}
       <div class="ai-contacts">${OFFICIAL_CONTACTS}</div>
     `;
   } catch(err){
@@ -820,7 +823,7 @@ async function openModeration(){
         <div style="font-weight:800;margin-bottom:4px;">${escapeHtml(p.autore)}</div>
         <div style="font-size:13px;margin-bottom:8px;">${escapeHtml(p.testo)}</div>
         <div style="display:flex;gap:8px;">
-          <button class="mod-restore" data-id="${p.id}" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:none;color:var(--greenDark);font-weight:700;">Ripristina</button>
+          <button class="mod-restore" data-id="${p.id}" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--green);background:none;color:var(--accentText);font-weight:700;">Ripristina</button>
           <button class="mod-delete" data-id="${p.id}" style="flex:1;padding:8px;border-radius:8px;border:none;background:#C0392B;color:#fff;font-weight:700;">Elimina</button>
         </div>
       </div>
@@ -1004,7 +1007,7 @@ function renderFeed(){
                </select>`
             : `<span class="stamp-corner stato ${STATO_CLASS[p.stato]}">${p.stato}</span>`)}
       <div class="post-top">
-        <div class="avatar sm">${avatarIconHtml(p.autore, 'var(--greenDark)')}</div>
+        <div class="avatar sm">${avatarIconHtml(p.autore, 'var(--accentText)')}</div>
         <div>
           <div><span class="post-name disp">${p.autore}</span> <span class="post-time">· ${p.quando}</span></div>
           <div class="tag-row">
@@ -1014,7 +1017,7 @@ function renderFeed(){
       </div>
       <div class="post-text">${escapeHtml(p.testo)}</div>
       ${p.foto ? `<img class="post-photo" src="${p.foto}" />` : ''}
-      ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--greenDark);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
+      ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--accentText);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
       <hr class="r-dash" />
       <div class="post-actions">
         <button class="action-btn like-btn ${p.liked?'liked':''}" data-id="${p.id}"><span class="msr" style="font-size:15px;">favorite</span> ${p.like}</button>
@@ -1192,14 +1195,45 @@ document.getElementById('photoInput').addEventListener('change', (e)=>{
   if(!file) return;
   const reader = new FileReader();
   reader.onload = ()=>{
-    pendingFoto = reader.result;
-    const prev = document.getElementById('photoPreview');
-    prev.src = pendingFoto;
-    prev.style.display = 'block';
-    document.getElementById('photoBtn').classList.add('has-photo');
-    analyzePhoto(pendingFoto);
+    const img = new Image();
+    img.onload = ()=>{
+      // Ridimensiona e comprime la foto prima di salvarla: le foto originali della
+      // fotocamera sono troppo pesanti (spesso 3-8MB) e superano il limite di
+      // dimensione della funzione serverless, causando l'errore di invio.
+      const MAX_DIM = 1280;
+      let w = img.width, h = img.height;
+      if(w > MAX_DIM || h > MAX_DIM){
+        if(w > h){ h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      pendingFoto = canvas.toDataURL('image/jpeg', 0.75);
+
+      const prev = document.getElementById('photoPreview');
+      prev.src = pendingFoto;
+      prev.style.display = 'block';
+      document.getElementById('photoBtn').classList.add('has-photo');
+      // Analisi IA disattivata: la funzione serverless "analyze-photo" non è ancora
+      // distribuita (in attesa di finanziamento comunale). Verrà riattivata qui
+      // quando pronta: analyzePhoto(pendingFoto);
+    };
+    img.src = reader.result;
   };
   reader.readAsDataURL(file);
+});
+
+document.getElementById('removePhotoBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  pendingFoto = null;
+  pendingAnalysis = null;
+  document.getElementById('photoInput').value = '';
+  const prev = document.getElementById('photoPreview');
+  prev.src = ''; prev.style.display = 'none';
+  document.getElementById('photoBtn').classList.remove('has-photo');
+  document.getElementById('aiAnalysis').className = '';
+  document.getElementById('aiAnalysis').innerHTML = '';
 });
 
 const postTextEl = document.getElementById('postText');
