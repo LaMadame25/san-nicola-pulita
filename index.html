@@ -154,6 +154,27 @@
   .cal-rules{font-size:11.5px;color:var(--inkSoft);margin-top:10px;line-height:1.6;padding-top:10px;border-top:1px solid var(--line);}
 
   /* Statistiche page */
+  .stats-hero{background:var(--greenDark);border-radius:16px;padding:18px 20px;color:#fff;}
+  .stats-hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8FBFA3;margin-bottom:4px;}
+  html[data-theme="dark"] .stats-hero-eyebrow{color:#8FBFA3;}
+  .stats-hero-num{font-family:'Titillium Web',sans-serif;font-weight:900;font-size:40px;line-height:1;}
+  .stats-hero-label{font-size:12.5px;color:#C9DFCF;margin-top:4px;}
+  .stats-hero-legend{display:flex;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.16);flex-wrap:wrap;}
+  .stats-hero-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;}
+  .stats-hero-legend-item b{font-family:'Titillium Web',sans-serif;}
+  .stats-rank-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .stats-rank-row:last-child{border-bottom:none;}
+  .stats-rank-badge{width:26px;height:26px;border-radius:50%;background:var(--bg);color:var(--inkSoft);font-family:'Titillium Web',sans-serif;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stats-rank-badge.top{background:var(--green);color:#fff;}
+  .stats-rank-name{font-weight:700;font-size:13px;color:var(--ink);}
+  .stats-rank-track{height:6px;border-radius:999px;background:var(--bg);margin-top:6px;overflow:hidden;}
+  .stats-rank-fill{height:100%;border-radius:999px;background:var(--green);}
+  .stats-rank-count{font-family:'Titillium Web',sans-serif;font-weight:900;font-size:15px;color:var(--accentText);}
+  .stats-tipo-row + .stats-tipo-row{margin-top:12px;}
+  .stats-tipo-top{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--ink);}
+  .stats-tipo-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+  .stats-tipo-track{height:7px;border-radius:999px;background:var(--bg);overflow:hidden;}
+  .stats-tipo-fill{height:100%;border-radius:999px;}
   .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .stat-box{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 3px rgba(31,77,44,.08);}
   .stat-num{font-family:'Titillium Web',sans-serif;font-weight:800;font-size:22px;color:var(--accentText);}
@@ -455,6 +476,7 @@
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ---------- Tema chiaro/scuro + header a tendina ----------
 (function(){
@@ -1042,6 +1064,15 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
+const TIPO_COLOR = {
+  "Rifiuti ingombranti": "#8B5E34",
+  "Discarica abusiva": "#B5541B",
+  "Cassonetti pieni": "#C9962C",
+  "Materiale pericoloso": "#6B6F68",
+  "Discussione / idea": "#2C6FBF"
+};
+let statsDonutChart = null;
+
 function renderStats(){
   const box = document.getElementById('statsContent');
   if(!box) return;
@@ -1073,22 +1104,34 @@ function renderStats(){
   const maxTipoCount = tipoSorted.length ? tipoSorted[0][1] : 1;
 
   box.innerHTML = `
-    <div class="stat-grid">
-      <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">Totale post</div></div>
-      <div class="stat-box"><div class="stat-num" style="color:var(--red);">${countStato['Segnalato']||0}</div><div class="stat-label">Segnalato</div></div>
-      <div class="stat-box"><div class="stat-num" style="color:var(--amber);">${countStato['In carico']||0}</div><div class="stat-label">In carico</div></div>
+    <div class="stats-hero">
+      <div class="stats-hero-eyebrow">Panoramica del territorio</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;">
+        <div>
+          <div class="stats-hero-num">${total}</div>
+          <div class="stats-hero-label">segnalazioni totali</div>
+        </div>
+        <div style="position:relative;width:78px;height:78px;flex-shrink:0;">
+          <canvas id="statsDonut" role="img" aria-label="Ciambella: ${countStato['Segnalato']||0} segnalate, ${countStato['In carico']||0} in carico, ${countStato['Risolto']||0} risolte"></canvas>
+        </div>
+      </div>
+      <div class="stats-hero-legend">
+        <div class="stats-hero-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:${STATO_COLOR['Segnalato']};flex-shrink:0;"></span>Segnalato <b>${countStato['Segnalato']||0}</b></div>
+        <div class="stats-hero-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:${STATO_COLOR['In carico']};flex-shrink:0;"></span>In carico <b>${countStato['In carico']||0}</b></div>
+        <div class="stats-hero-legend-item"><span style="width:8px;height:8px;border-radius:50%;background:${STATO_COLOR['Risolto']};flex-shrink:0;"></span>Risolto <b>${countStato['Risolto']||0}</b></div>
+      </div>
     </div>
 
     <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">local_fire_department</span> Zone più segnalate</div>
-    <div class="card" style="margin-top:0;">
+    <div class="card" style="margin-top:0;padding:6px 16px;">
       ${zoneSorted.map(([zona,count],i) => `
-        <div class="zone-rank">
-          <div class="zone-rank-medal" style="${i<3 ? 'background:var(--green);color:#fff;' : ''}">${i+1}</div>
-          <div class="zone-rank-info">
-            <div class="zone-rank-name">${escapeHtml(zona)}</div>
-            <div class="bar-track" style="margin-top:4px;"><div class="bar-fill" style="width:${(count/maxZonaCount*100).toFixed(0)}%;"></div></div>
+        <div class="stats-rank-row">
+          <div class="stats-rank-badge ${i<3?'top':''}">${i+1}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="stats-rank-name">${escapeHtml(zona)}</div>
+            <div class="stats-rank-track"><div class="stats-rank-fill" style="width:${(count/maxZonaCount*100).toFixed(0)}%;"></div></div>
           </div>
-          <div class="zone-rank-count">${count}</div>
+          <div class="stats-rank-count">${count}</div>
         </div>
       `).join('')}
     </div>
@@ -1096,23 +1139,31 @@ function renderStats(){
     <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">checklist</span> Tipologie segnalate</div>
     <div class="card" style="margin-top:0;">
       ${tipoSorted.map(([tipo,count]) => `
-        <div class="bar-row">
-          <div class="bar-row-top"><span class="bar-row-label">${escapeHtml(tipo)}</span><span>${count}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${(count/maxTipoCount*100).toFixed(0)}%;background:${tipo==='Discussione / idea' ? '#5B4FC4' : 'var(--green)'};"></div></div>
-        </div>
-      `).join('')}
-    </div>
-
-    <div class="section-title"><span class="msr" style="font-size:14px;vertical-align:-2px;">task_alt</span> Stato delle segnalazioni</div>
-    <div class="card" style="margin-top:0;">
-      ${STATI.map(s => `
-        <div class="bar-row">
-          <div class="bar-row-top"><span class="bar-row-label">${s}</span><span>${countStato[s]||0} / ${segnalazioni.length}</span></div>
-          <div class="bar-track"><div class="bar-fill" style="width:${segnalazioni.length ? ((countStato[s]||0)/segnalazioni.length*100).toFixed(0) : 0}%;background:${STATO_COLOR[s]};"></div></div>
+        <div class="stats-tipo-row">
+          <div class="stats-tipo-top"><span><span class="stats-tipo-dot" style="background:${TIPO_COLOR[tipo]||'var(--green)'};"></span>${escapeHtml(tipo)}</span><span>${count}</span></div>
+          <div class="stats-tipo-track"><div class="stats-tipo-fill" style="width:${(count/maxTipoCount*100).toFixed(0)}%;background:${TIPO_COLOR[tipo]||'var(--green)'};"></div></div>
         </div>
       `).join('')}
     </div>
   `;
+
+  if(statsDonutChart){ statsDonutChart.destroy(); statsDonutChart = null; }
+  const donutCanvas = document.getElementById('statsDonut');
+  if(donutCanvas){
+    statsDonutChart = new Chart(donutCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Segnalato','In carico','Risolto'],
+        datasets: [{
+          data: [countStato['Segnalato']||0, countStato['In carico']||0, countStato['Risolto']||0],
+          backgroundColor: [STATO_COLOR['Segnalato'], STATO_COLOR['In carico'], STATO_COLOR['Risolto']],
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--greenDark') || '#123825',
+          borderWidth: 2
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+    });
+  }
 }
 
 function showToast(msg, duration = 2200){
