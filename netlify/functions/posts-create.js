@@ -1,6 +1,8 @@
 import { getStore } from "@netlify/blobs";
 import { getUser } from "@netlify/identity";
 
+const MIN_INTERVAL_MS = 30 * 1000; // tempo minimo di attesa tra due segnalazioni dello stesso utente
+
 export default async (req, context) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Metodo non permesso" }), { status: 405 });
@@ -9,6 +11,14 @@ export default async (req, context) => {
   const user = await getUser();
   if (!user) {
     return new Response(JSON.stringify({ error: "Devi accedere per pubblicare" }), { status: 401 });
+  }
+
+  const rateStore = getStore({ name: "sannicola-ratelimit", consistency: "strong" });
+  const lastTime = await rateStore.get(user.email, { type: "text" });
+  const now = Date.now();
+  if (lastTime && (now - Number(lastTime)) < MIN_INTERVAL_MS) {
+    const waitSec = Math.ceil((MIN_INTERVAL_MS - (now - Number(lastTime))) / 1000);
+    return new Response(JSON.stringify({ error: `Aspetta ${waitSec} secondi prima di pubblicare un'altra segnalazione` }), { status: 429 });
   }
 
   try {
@@ -38,13 +48,14 @@ export default async (req, context) => {
       commenti: [],
       aiMaterial: aiMaterial || null,
       aiCategory: aiCategory || null,
-      createdAt: Date.now()
+      createdAt: now
     };
 
     const store = getStore({ name: "sannicola-posts", consistency: "strong" });
     const data = (await store.get("all", { type: "json" })) || [];
     data.unshift(newPost);
     await store.setJSON("all", data);
+    await rateStore.set(user.email, String(now));
 
     const { authorEmail, ...toReturn } = newPost;
     return new Response(JSON.stringify({ ...toReturn, isMine: true }), {
