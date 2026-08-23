@@ -1049,11 +1049,12 @@ function renderFeed(){
         ${p.isMine ? `<button class="action-btn delete-btn" data-id="${p.id}" style="margin-left:auto;color:#C0392B;"><span class="msr" style="font-size:15px;">delete</span></button>` : ''}
       </div>
       <div class="comments" id="comments-${p.id}">
-        ${p.commenti.map(c=>{
-          const canDelete = c.id && currentUser && (c.autore === currentUser.name || currentUser.isAdmin);
+        ${p.commenti.map((c,idx)=>{
+          const canDelete = currentUser && (c.autore === currentUser.name || currentUser.isAdmin);
+          const identifier = c.id ? `data-comment-id="${c.id}"` : `data-index="${idx}"`;
           return `<div class="comment-item" data-comment-id="${c.id||''}">
             <div><b>${escapeHtml(c.autore)}</b> ${escapeHtml(c.testo)}</div>
-            ${canDelete ? `<button class="comment-delete" data-post-id="${p.id}" data-comment-id="${c.id}"><span class="msr" style="font-size:14px;">close</span></button>` : ''}
+            ${canDelete ? `<button class="comment-delete" data-post-id="${p.id}" ${identifier}><span class="msr" style="font-size:14px;">close</span></button>` : ''}
           </div>`;
         }).join('')}
         <div class="comment-input-row">
@@ -1334,6 +1335,9 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
     if(!res.ok){
       let detail = '';
       try{ const errBody = await res.json(); detail = errBody.error || ''; }catch(e){}
+      if(res.status === 429 && detail){
+        throw new Error(detail);
+      }
       throw new Error(`HTTP ${res.status}${detail ? ' — ' + detail : ''}`);
     }
     post = await res.json();
@@ -1443,13 +1447,14 @@ function attachFeedEvents(){
     btn.addEventListener('click', async ()=>{
       const postId = btn.dataset.postId;
       const commentId = btn.dataset.commentId;
+      const index = btn.dataset.index !== undefined ? Number(btn.dataset.index) : undefined;
       const p = posts.find(x=>x.id===postId);
       btn.disabled = true;
       try{
         const res = await fetch(`${API_BASE}/posts-comment`, {
           method: 'DELETE',
           headers: await authHeaders(),
-          body: JSON.stringify({ id: postId, commentId })
+          body: JSON.stringify(commentId ? { id: postId, commentId } : { id: postId, index })
         });
         if(!res.ok) throw new Error();
         const data = await res.json();
