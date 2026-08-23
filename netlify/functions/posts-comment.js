@@ -40,8 +40,8 @@ export default async (req, context) => {
 
   if (req.method === "DELETE") {
     try {
-      const { id, commentId } = await req.json();
-      if (!id || !commentId) {
+      const { id, commentId, index } = await req.json();
+      if (!id || (!commentId && typeof index !== "number")) {
         return new Response(JSON.stringify({ error: "Parametri non validi" }), { status: 400 });
       }
       const data = (await store.get("all", { type: "json" })) || [];
@@ -49,16 +49,23 @@ export default async (req, context) => {
       if (!post) {
         return new Response(JSON.stringify({ error: "Post non trovato" }), { status: 404 });
       }
-      const comment = post.commenti.find(c => c.id === commentId);
+      const displayName = (user.userMetadata && user.userMetadata.full_name) || user.email.split("@")[0];
+      const comment = commentId
+        ? post.commenti.find(c => c.id === commentId)
+        : post.commenti[index];
       if (!comment) {
         return new Response(JSON.stringify({ error: "Commento non trovato" }), { status: 404 });
       }
-      const isOwner = comment.authorEmail === user.email;
+      // I commenti vecchi (creati prima di questo aggiornamento) non hanno authorEmail:
+      // per quelli verifichiamo il nome mostrato invece dell'email.
+      const isOwner = comment.authorEmail ? comment.authorEmail === user.email : comment.autore === displayName;
       const isAdmin = (user.roles || []).includes("admin");
       if (!isOwner && !isAdmin) {
         return new Response(JSON.stringify({ error: "Non puoi cancellare questo commento" }), { status: 403 });
       }
-      post.commenti = post.commenti.filter(c => c.id !== commentId);
+      post.commenti = commentId
+        ? post.commenti.filter(c => c.id !== commentId)
+        : post.commenti.filter((c, i) => i !== index);
       await store.setJSON("all", data);
       const commentiPubblici = post.commenti.map(({ authorEmail, ...c }) => c);
       return new Response(JSON.stringify({ id: post.id, commenti: commentiPubblici }), {
