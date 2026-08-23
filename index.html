@@ -228,8 +228,9 @@
   .action-btn.liked{color:var(--red);}
   .comments{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:none;}
   .comments.show{display:block;}
-  .comment-item{font-size:13px;background:var(--bg);padding:7px 10px;border-radius:10px;margin-bottom:6px;}
+  .comment-item{font-size:13px;background:var(--bg);padding:7px 10px;border-radius:10px;margin-bottom:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
   .comment-item:first-child{margin-top:2px;}
+  .comment-delete{color:var(--inkSoft);background:none;flex-shrink:0;padding:2px;}
   .comment-input-row{display:flex;gap:8px;margin-top:6px;}
   .comment-input-row input{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:16px;}
   .comment-send{color:var(--green);background:none;}
@@ -1048,7 +1049,13 @@ function renderFeed(){
         ${p.isMine ? `<button class="action-btn delete-btn" data-id="${p.id}" style="margin-left:auto;color:#C0392B;"><span class="msr" style="font-size:15px;">delete</span></button>` : ''}
       </div>
       <div class="comments" id="comments-${p.id}">
-        ${p.commenti.map(c=>`<div class="comment-item"><b>${escapeHtml(c.autore)}</b> ${escapeHtml(c.testo)}</div>`).join('')}
+        ${p.commenti.map(c=>{
+          const canDelete = c.id && currentUser && (c.autore === currentUser.name || currentUser.isAdmin);
+          return `<div class="comment-item" data-comment-id="${c.id||''}">
+            <div><b>${escapeHtml(c.autore)}</b> ${escapeHtml(c.testo)}</div>
+            ${canDelete ? `<button class="comment-delete" data-post-id="${p.id}" data-comment-id="${c.id}"><span class="msr" style="font-size:14px;">close</span></button>` : ''}
+          </div>`;
+        }).join('')}
         <div class="comment-input-row">
           <input type="text" placeholder="Scrivi un commento..." data-id="${p.id}" class="comment-input" />
           <button class="comment-send pop" data-id="${p.id}"><span class="msr" style="font-size:16px;">send</span></button>
@@ -1430,6 +1437,29 @@ function attachFeedEvents(){
       }
       renderFeed(); attachFeedEvents();
       document.getElementById('comments-'+id).classList.add('show');
+    });
+  });
+  document.querySelectorAll('.comment-delete').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const postId = btn.dataset.postId;
+      const commentId = btn.dataset.commentId;
+      const p = posts.find(x=>x.id===postId);
+      btn.disabled = true;
+      try{
+        const res = await fetch(`${API_BASE}/posts-comment`, {
+          method: 'DELETE',
+          headers: await authHeaders(),
+          body: JSON.stringify({ id: postId, commentId })
+        });
+        if(!res.ok) throw new Error();
+        const data = await res.json();
+        p.commenti = data.commenti;
+        renderFeed(); attachFeedEvents();
+        document.getElementById('comments-'+postId).classList.add('show');
+      }catch(err){
+        btn.disabled = false;
+        showToast("Impossibile cancellare il commento, riprova.");
+      }
     });
   });
   document.querySelectorAll('.comment-input').forEach(inp=>{
