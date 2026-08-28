@@ -1213,6 +1213,7 @@ function renderFeed(){
           <div><span class="post-name disp">${p.autore}</span> <span class="post-time">· ${p.quando}</span></div>
           <div class="tag-row">
             <span class="tag"><span class="msr" style="font-size:11px;vertical-align:-1px;">location_on</span> ${p.via || nearestZoneLabel(p.lat,p.lng)}</span>
+            ${(p.comune ? p.comune === "San Marco Evangelista" : isSanMarco(p.lat,p.lng)) ? `<span class="tag" style="background:var(--greenSoft);color:var(--accentText);">★ San Marco Ev.</span>` : ''}
           </div>
         </div>
       </div>
