@@ -153,6 +153,10 @@
   .cal-day b{color:var(--accentText);font-weight:700;}
   .cal-rules{font-size:11.5px;color:var(--inkSoft);margin-top:10px;line-height:1.6;padding-top:10px;border-top:1px solid var(--line);}
 
+  .comune-banner-row{display:flex;gap:8px;margin-bottom:14px;}
+  .comune-banner{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--inkSoft);font-family:'Work Sans',sans-serif;font-weight:700;font-size:12.5px;text-align:center;line-height:1.2;}
+  .comune-banner.active{border-color:var(--green);background:var(--greenSoft);color:var(--accentText);}
+
   /* Impostazioni page */
   .settings-profile{background:var(--greenDark);border-radius:16px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:14px;}
   .settings-avatar{width:52px;height:52px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:'Titillium Web',sans-serif;font-weight:900;font-size:20px;flex-shrink:0;}
@@ -434,6 +438,15 @@
         <div class="disp compose-hero">Hai visto un problema?</div>
         <p class="compose-sub">Foto, posizione, fatto. Il Comune lo vede subito.</p>
 
+        <div class="comune-banner-row" id="comuneBannerRow">
+          <button type="button" class="comune-banner active" data-comune="San Nicola la Strada">
+            <span class="msr" style="font-size:17px;">location_city</span> San Nicola la Strada
+          </button>
+          <button type="button" class="comune-banner" data-comune="San Marco Evangelista">
+            <span class="msr" style="font-size:17px;">location_city</span> San Marco Evangelista
+          </button>
+        </div>
+
         <div class="photo-tile" id="photoBtn">
           <img id="photoPreview" style="display:none;" />
           <button type="button" class="photo-remove-btn" id="removePhotoBtn" aria-label="Rimuovi foto"><span class="msr" style="font-size:16px;">close</span></button>
@@ -541,7 +554,7 @@
           <button type="button" class="confirm-btn pop" id="confirmLocBtn"><span class="msr" style="font-size:14px;color:#fff;">check_circle</span> Conferma</button>
         </div>
       </div>
-      <div class="map-hint-bar"><span class="msr" style="font-size:13px;vertical-align:-2px;">info</span> Il colore del pin indica lo stato: <b style="color:#B5541B;">●</b> segnalato · <b style="color:#C08A2E;">●</b> in carico · <b style="color:#1F4D2C;">●</b> risolto.</div>
+      <div class="map-hint-bar"><span class="msr" style="font-size:13px;vertical-align:-2px;">info</span> Il colore del pin indica lo stato: <b style="color:#B5541B;">●</b> segnalato · <b style="color:#C08A2E;">●</b> in carico · <b style="color:#1F4D2C;">●</b> risolto. La <b>★</b> indica una segnalazione a San Marco Evangelista.</div>
     </div>
   </section>
 
@@ -606,6 +619,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 // ---------- Data ----------
 const TOWN_CENTER = [41.0500, 14.3330]; // San Nicola la Strada, CE
+const SAN_MARCO_CENTER = [41.0370, 14.3398]; // San Marco Evangelista, CE (comune confinante)
+const MAP_VIEW_CENTER = [41.0435, 14.3364]; // punto medio tra i due comuni, per mostrarli entrambi
 
 const ZONE_LANDMARKS = [
   { label: "Rotonda Ovest", lat: 41.0525, lng: 14.3278 },
@@ -613,7 +628,16 @@ const ZONE_LANDMARKS = [
   { label: "Zona Stazione", lat: 41.0468, lng: 14.3312 },
   { label: "Piazza Municipio", lat: 41.0503, lng: 14.3327 },
   { label: "Via Appia", lat: 41.0552, lng: 14.3352 },
+  { label: "San Marco Evangelista", lat: SAN_MARCO_CENTER[0], lng: SAN_MARCO_CENTER[1] },
 ];
+
+// Un punto è considerato "San Marco Evangelista" se è più vicino al suo centro
+// che al centro di San Nicola la Strada (confine approssimativo, non il confine reale).
+function isSanMarco(lat, lng){
+  const dSanMarco = Math.hypot(SAN_MARCO_CENTER[0]-lat, SAN_MARCO_CENTER[1]-lng);
+  const dSanNicola = Math.hypot(TOWN_CENTER[0]-lat, TOWN_CENTER[1]-lng);
+  return dSanMarco < dSanNicola;
+}
 
 function nearestZoneLabel(lat, lng){
   let best = null, bestD = Infinity;
@@ -661,6 +685,14 @@ let postsLoaded = false;
 let filterStato = "Tutti";
 let pendingLocation = null;
 let pendingFoto = null;
+let selectedComune = "San Nicola la Strada";
+document.querySelectorAll('.comune-banner').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.comune-banner').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedComune = btn.dataset.comune;
+  });
+});
 let map, markersLayer;
 let pendingMarker = null;
 let pickModeActive = false;
@@ -1058,7 +1090,7 @@ function initMap(){
     document.getElementById('leafletMap').innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--inkSoft);">Impossibile caricare la mappa (connessione assente o bloccata). Riprova più tardi.</div>';
     return;
   }
-  map = L.map('leafletMap').setView(TOWN_CENTER, 15);
+  map = L.map('leafletMap').setView(MAP_VIEW_CENTER, 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1083,12 +1115,25 @@ function dotIcon(color){
   });
 }
 
+function starIcon(color){
+  return L.divIcon({
+    className: 'pin-marker',
+    html: `<svg width="20" height="20" viewBox="0 0 20 20" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));">
+      <path d="M10 1 L12.4 7 L19 7.6 L14 12 L15.5 18.5 L10 15 L4.5 18.5 L6 12 L1 7.6 L7.6 7 Z" fill="${color}" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>
+    </svg>`,
+    iconSize:[20,20], iconAnchor:[10,10]
+  });
+}
+
 function renderMarkers(){
   if(!markersLayer) return;
   markersLayer.clearLayers();
   posts.forEach(p=>{
-    const marker = L.marker([p.lat,p.lng], { icon: dotIcon(STATO_COLOR[p.stato]) });
-    marker.bindPopup(`<b>${p.autore}</b><br>${p.testo.slice(0,80)}${p.testo.length>80?'…':''}<br><small>${p.stato}</small>`);
+    const inSanMarco = p.comune ? p.comune === "San Marco Evangelista" : isSanMarco(p.lat, p.lng);
+    const icon = inSanMarco ? starIcon(STATO_COLOR[p.stato]) : dotIcon(STATO_COLOR[p.stato]);
+    const marker = L.marker([p.lat,p.lng], { icon });
+    const luogo = inSanMarco ? ' · <span style="color:var(--green);font-weight:700;">San Marco Ev.</span>' : '';
+    marker.bindPopup(`<b>${p.autore}</b>${luogo}<br>${p.testo.slice(0,80)}${p.testo.length>80?'…':''}<br><small>${p.stato}</small>`);
     marker.addTo(markersLayer);
   });
 }
@@ -1444,7 +1489,8 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const testo = postTextEl.value.trim();
   if(!testo) return;
-  const loc = pendingLocation || { lat: TOWN_CENTER[0], lng: TOWN_CENTER[1] };
+  const fallbackCenter = selectedComune === "San Marco Evangelista" ? SAN_MARCO_CENTER : TOWN_CENTER;
+  const loc = pendingLocation || { lat: fallbackCenter[0], lng: fallbackCenter[1] };
   const btn = document.getElementById('publishBtn');
   btn.disabled = true;
 
@@ -1452,6 +1498,7 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
 
   const payload = {
     lat: loc.lat, lng: loc.lng, via,
+    comune: selectedComune,
     tipo: document.getElementById('tipoSelect').value,
     testo, foto: pendingFoto,
     aiMaterial: pendingAnalysis ? pendingAnalysis.material : null,
