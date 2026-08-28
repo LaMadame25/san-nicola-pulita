@@ -23,11 +23,16 @@ export default async (req, context) => {
 
   try {
     const body = await req.json();
-    const { lat, lng, via, tipo, testo, foto, aiMaterial, aiCategory } = body;
+    const { lat, lng, via, comune, tipo, testo, foto, aiMaterial, aiCategory } = body;
 
     if (!testo || typeof testo !== "string" || !testo.trim()) {
       return new Response(JSON.stringify({ error: "Testo mancante" }), { status: 400 });
     }
+
+    const comuneValido = comune === "San Marco Evangelista" ? "San Marco Evangelista" : "San Nicola la Strada";
+    const defaultCoords = comuneValido === "San Marco Evangelista"
+      ? { lat: 41.0370, lng: 14.3398 }
+      : { lat: 41.0500, lng: 14.3330 };
 
     const displayName = (user.userMetadata && user.userMetadata.full_name) || user.email.split("@")[0];
 
@@ -35,9 +40,10 @@ export default async (req, context) => {
       id: "p" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
       autore: displayName,
       authorEmail: user.email,
-      lat: typeof lat === "number" ? lat : 41.0500,
-      lng: typeof lng === "number" ? lng : 14.3330,
+      lat: typeof lat === "number" ? lat : defaultCoords.lat,
+      lng: typeof lng === "number" ? lng : defaultCoords.lng,
       via: (typeof via === "string" && via.trim()) ? via.trim().slice(0, 100) : null,
+      comune: comuneValido,
       tipo: tipo || "Discussione / idea",
       testo: testo.trim().slice(0, 500),
       foto: foto || null,
