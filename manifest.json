@@ -1,7 +1,7 @@
 {
-  "name": "San Nicola Pulita",
-  "short_name": "SN Pulita",
-  "description": "Segnala rifiuti abbandonati e discuti dell'ambiente a San Nicola la Strada.",
+  "name": "Viridi",
+  "short_name": "Viridi",
+  "description": "Segnala rifiuti abbandonati e discuti dell'ambiente a San Nicola la Strada e San Marco Evangelista.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
