@@ -156,6 +156,7 @@
   .comune-banner-row{display:flex;gap:8px;margin-bottom:14px;}
   .comune-banner{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--inkSoft);font-family:'Work Sans',sans-serif;font-weight:700;font-size:12.5px;text-align:center;line-height:1.2;}
   .comune-banner.active{border-color:var(--green);background:var(--greenSoft);color:var(--accentText);}
+  .cal-pending-note{display:flex;align-items:flex-start;gap:8px;background:var(--bg);border:1px solid var(--amber);border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--ink);font-weight:600;margin-bottom:6px;line-height:1.4;}
 
   /* Impostazioni page */
   .settings-profile{background:var(--greenDark);border-radius:16px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:14px;}
@@ -494,6 +495,17 @@
   <section class="page" data-page="calendario">
     <div class="page-inner">
       <div class="disp" style="font-size:12px;font-weight:800;color:var(--inkSoft);text-transform:uppercase;margin-bottom:10px;">Calendario raccolta differenziata</div>
+
+      <div class="comune-banner-row" id="calComuneBannerRow">
+        <button type="button" class="comune-banner active" data-comune="San Nicola la Strada">
+          <span class="msr" style="font-size:17px;">location_city</span> San Nicola la Strada
+        </button>
+        <button type="button" class="comune-banner" data-comune="San Marco Evangelista">
+          <span class="msr" style="font-size:17px;">location_city</span> San Marco Evangelista
+        </button>
+      </div>
+
+      <div id="calSanNicola">
       <div class="card" style="margin-top:0;">
         <div class="cal-row">
           <div class="cal-icon"><span class="msr" style="color:var(--accentText);">compost</span></div>
@@ -525,6 +537,44 @@
         </div>
       </div>
       <div class="footer-note">Ecosportello, Via De Gasperi 45 (lun–ven 7:45–14:00, mar/gio fino alle 17:00) · Numero verde 800.170.905 · WhatsApp 339.4468607 · Isola Ecologica Via Evangelista.</div>
+      </div>
+
+      <div id="calSanMarco" style="display:none;">
+      <div class="card" style="margin-top:0;">
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">compost</span></div>
+          <div class="cal-text"><div class="cal-mat">Organico (Umido)</div><div class="cal-day">Raccolta <b>lunedì, mercoledì e sabato</b></div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">recycling</span></div>
+          <div class="cal-text"><div class="cal-mat">Multimateriale (plastica e metalli)</div><div class="cal-day">Raccolta ogni <b>giovedì</b>, più il <b>martedì a settimane alterne</b></div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">delete</span></div>
+          <div class="cal-text"><div class="cal-mat">Secco residuale (indifferenziato)</div><div class="cal-day">Raccolta il <b>martedì</b>, nelle settimane alterne rispetto al multimateriale</div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">description</span></div>
+          <div class="cal-text"><div class="cal-mat">Carta e Cartone</div><div class="cal-day">Raccolta ogni <b>mercoledì</b></div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">liquor</span></div>
+          <div class="cal-text"><div class="cal-mat">Vetro</div><div class="cal-day">Raccolta ogni <b>venerdì</b></div></div>
+        </div>
+        <div class="cal-row">
+          <div class="cal-icon"><span class="msr" style="color:var(--accentText);">baby_changing_station</span></div>
+          <div class="cal-text"><div class="cal-mat">Pannolini e Pannoloni</div><div class="cal-day">Raccolta il <b>martedì e il venerdì</b></div></div>
+        </div>
+        <div class="cal-rules">
+          <b>Il martedì alterna tra multimateriale e secco residuale</b> settimana per settimana — controlla il calendario numerato ufficiale su <b>sanmarcoevangelistadifferenzia.it</b> per sapere quale tocca in una data specifica.<br><br>
+          <b>Ingombranti, RAEE, sfalci e potature:</b> solo su prenotazione telefonica.<br>
+          Numero verde: <b>800.628.976</b> · Numero verde alternativo: <b>800 913 774</b> (lun–sab 8:30–13:00) · WhatsApp: <b>338 156 5196</b><br><br>
+          Gestore del servizio: <b>WM Magenta Servizi Ambientali</b>. Gli utenti sono tenuti a seguire fedelmente il calendario di conferimento.
+        </div>
+      </div>
+      <div class="footer-note">Fonte: calendario ufficiale del Comune di San Marco Evangelista (WM Magenta Servizi Ambientali) · sanmarcoevangelistadifferenzia.it</div>
+      </div>
+
     </div>
   </section>
 
@@ -686,11 +736,21 @@ let filterStato = "Tutti";
 let pendingLocation = null;
 let pendingFoto = null;
 let selectedComune = "San Nicola la Strada";
-document.querySelectorAll('.comune-banner').forEach(btn=>{
+document.querySelectorAll('#comuneBannerRow .comune-banner').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.comune-banner').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#comuneBannerRow .comune-banner').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     selectedComune = btn.dataset.comune;
+  });
+});
+
+document.querySelectorAll('#calComuneBannerRow .comune-banner').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#calComuneBannerRow .comune-banner').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const isSanMarcoView = btn.dataset.comune === "San Marco Evangelista";
+    document.getElementById('calSanNicola').style.display = isSanMarcoView ? 'none' : '';
+    document.getElementById('calSanMarco').style.display = isSanMarcoView ? '' : 'none';
   });
 });
 let map, markersLayer;
