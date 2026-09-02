@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Viridi — Segnala, partecipa, migliora il tuo quartiere</title>
+  <meta name="description" content="Viridi: app civica per segnalare problemi, consultare il calendario della raccolta e discutere con il quartiere."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f5;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #16a34a;
+      --primary-contrast: #ffffff;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --info: #2563eb;
+      --border: #e5e7eb;
+      --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.06);
+      --radius: 12px;
+      --nav-height: 64px;
+    }
+    [data-theme="dark"] {
+      --bg: #0b0f14;
+      --surface: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --primary: #22c55e;
+      --primary-contrast: #0b0f14;
+      --border: #1f2937;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+    .header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg); border-bottom: 1px solid var(--border);
+      height: var(--nav-height);
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 100%;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px;
+    }
+    .brand .logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      display: grid; place-items: center; color: #fff; font-weight: 800;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav button, .nav a.nav-btn {
+      background: transparent; border: none; color: var(--text);
+      padding: 8px 12px; border-radius: 10px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .nav button:hover, .nav a.nav-btn:hover { background: var(--surface); }
+    .nav .primary-btn {
+      background: var(--primary); color: var(--primary-contrast);
+    }
+    .nav .primary-btn:hover { filter: brightness(0.95); }
+    main { padding: 24px 0 80px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+    }
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .spacer { flex: 1; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); cursor: pointer;
+    }
+    .btn:hover { filter: brightness(0.97); }
+    .btn-primary {
+      background: var(--primary); color: var(--primary-contrast); border: none;
+    }
+    .btn-danger {
+      background: var(--danger); color: #fff; border: none;
+    }
+    .btn-icon {
+      width: 40px; height: 40px; padding: 0; border-radius: 10px;
+      display: grid; place-items: center;
+    }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text);
+      font: inherit;
+    }
+    label { display: block; font-weight: 500; margin-bottom: 6px; }
+    .field { margin-bottom: 14px; }
+    .helper { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 999px; font-size: 12px;
+      border: 1px solid var(--border); background: var(--bg);
+    }
+    .tag.reported { border-color: var(--info); color: var(--info); }
+    .tag.incharge { border-color: var(--warning); color: var(--warning); }
+    .tag.resolved { border-color: var(--primary); color: var(--primary); }
+    .pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px;
+    }
+    .pill.active { background: var(--primary); color: var(--primary-contrast); border-color: var(--primary); }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--surface);
+      display: grid; place-items: center; font-weight: 700; font-size: 13px;
+      border: 1px solid var(--border);
+    }
+    .toolbar {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .map-wrap { height: 420px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    #map { height: 100%; width: 100%; }
+    .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .calendar-day { padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .calendar-day strong { display: block; margin-bottom: 4px; }
+    .forum-post {
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--bg);
+    }
+    .post-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .post-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .stat-card { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .stat-card .value { font-size: 22px; font-weight: 700; }
+    .stat-card .label { font-size: 12px; color: var(--muted); }
+    .footer {
+      margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .admin-badge {
+      font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">V</div>
+        <span>Viridi</span>
+        <span class="admin-badge" id="adminBadge" aria-hidden="true"></span>
+      </div>
+      <nav class="nav" aria-label="Navigazione principale">
+        <button class="nav-btn" data-nav="report" aria-label="Segnala un problema">
+          <span class="material-icons" aria-hidden="true">campaign</span> Segnala
+        </button>
+        <button class="nav-btn" data-nav="calendar" aria-label="Calendario raccolta">
+          <span class="material-icons" aria-hidden="true">calendar_month</span> Calendario
+        </button>
+        <button class="nav-btn" data-nav="forum" aria-label="Forum">
+          <span class="material-icons" aria-hidden="true">forum</span> Forum
+        </button>
+        <button class="nav-btn" data-nav="map" aria-label="Mappa">
+          <span class="material-icons" aria-hidden="true">map</span> Mappa
+        </button>
+        <button class="nav-btn" data-nav="stats" aria-label="Statistiche">
+          <span class="material-icons" aria-hidden="true">bar_chart</span> Statistiche
+        </button>
+        <button class="nav-btn" id="themeToggle" aria-label="Cambia tema">
+          <span class="material-icons" aria-hidden="true">dark_mode</span>
+        </button>
+        <button class="nav-btn primary-btn" id="authBtn" aria-label="Accedi o registrati">
+          Accedi
+        </button>
+        <button class="nav-btn" id="settingsBtn" aria-label="Impostazioni" style="display:none;">
+          <span class="material-icons" aria-hidden="true">settings</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Sezione: Home / Benvenuto -->
+    <section id="home" class="section active">
+      <div class="grid grid-2">
+        <div class="card">
+          <h1>Benvenuto su Viridi</h1>
+          <p>Accedi con la tua email per segnalare problemi, consultare il calendario della raccolta e discutere con il quartiere.</p>
+          <div class="row" style="margin-top:12px;">
+            <button class="btn btn-primary" data-nav="report">
+              <span class="material-icons" aria-hidden="true">campaign</span> Segnala un problema
+            </button>
+            <button class="btn" data-nav="calendar">
+              <span class="material-icons" aria-hidden="true">calendar_month</span> Vedi calendario
+            </button>
+          </div>
+          <div class="footer" style="margin-top:16px;">
+            Progetto civico dei cittadini · dati condivisi in tempo reale · mappa OpenStreetMap © contributori OSM · in aggiunta ai canali ufficiali.
+          </div>
+        </div>
+        <div class="card">
+          <h2>Come funziona</h2>
+          <ol style="margin:0; padding-left:18px; color:var(--muted);">
+            <li>Scegli il tuo Comune.</li>
+            <li>Segnala un problema con foto e posizione.</li>
+            <li>Il Comune vede la segnalazione e può aggiornarne lo stato.</li>
+            <li>Segui l'avanzamento nella mappa e nel forum.</li>
+          </ol>
+          <div class="grid grid-2" style="margin-top:12px;">
+            <div class="calendar-day">
+              <strong><span class="material-icons" style="vertical-align:middle;font-size:16px;">eco</span> Sostenibile</strong>
+              <span class="muted" style="font-size:13px;">Segnalazioni mirate per ridurre impatto ambientale.</span>
+            </div>
+            <div class="calendar-day">
+              <strong><span class="material-icons" style="vertical-align:middle;font-size:16px;">groups</span> Comunità·º</strong>
+              <span class="muted" style="font-size:13px;">Forum e trasparenza per coinvolgere i cittadini.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione: Segnala -->
+    <section id="report" class="section">
+      <h1>Hai visto un problema?</h1>
+      <p>Foto, posizione e descrizione. Il Comune lo vede subito.</p>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <form id="reportForm">
+            <div class="field">
+              <label for="reportComune">Comune</label>
+              <select id="reportComune" required>
+                <option value="san_nicola">San Nicola la Strada</option>
+                <option value="san_marco">San Marco Evangelista</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="reportCategory">Categoria</label>
+              <select id="reportCategory" required>
+                <option value="ingombranti">Rifiuti ingombranti</option>
+                <option value="discarica">Discarica abusiva</option>
+                <option value="cassonetti">Cassonetti pieni</option>
+                <option value="pericoloso">Materiale pericoloso</option>
+                <option value="idea">Discussione / idea</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="reportPhoto">Foto (opzionale)</label>
+              <input type="file" id="reportPhoto" accept="image/*" />
+              <div class="helper">Formati: JPG, PNG. Max 5 MB.</div>
+              <div id="photoPreview" class="hidden" style="margin-top:8px;">
+                <img id="photoPreviewImg" src="" alt="Anteprima foto" style="max-width:100%; border-radius:8px; border:1px solid var(--border);">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="reportDesc">Descrizione</label>
+              <textarea id="reportDesc" rows="4" placeholder="Descrivi brevemente il problema..." required maxlength="500"></textarea>
+              <div class="helper" id="descCounter">0 / 500 caratteri</div>
+            </div>
+
+            <div class="field">
+              <label>Posizione</label>
+              <div class="row">
+                <button type="button" class="btn" id="useMyLocation">
+                  <span class="material-icons" aria-hidden="true">my_location</span> Usa la mia posizione
+                </button>
+                <button type="button" class="btn" id="chooseOnMap">
+                  <span class="material-icons" aria-hidden="true">map</span> Scegli sulla mappa
+                </button>
+                <span class="muted" id="positionStatus" style="font-size:13px;">Nessuna posizione selezionata</span>
+              </div>
+              <input type="hidden" id="reportLat" />
+              <input type="hidden" id="reportLng" />
+            </div>
+
+            <div class="row">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons" aria-hidden="true">send</span> Pubblica segnalazione
+              </button>
+              <span class="muted" style="font-size:13px;">Il tuo Comune vedrà·º la posizione esatta e potrà intervenire.</span>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Le tue segnalazioni</h2>
+          <div class="toolbar">
+            <div class="pill-group" id="myReportsFilter">
+              <button class="pill active" data-filter="all">Tutte</button>
+              <button class="pill" data-filter="reported">Segnalato</button>
+              <button class="pill" data-filter="incharge">In carico</button>
+              <button class="pill" data-filter="resolved">Risolto</button>
+            </div>
+          </div>
+          <div id="myReportsList" class="grid">
+            <!-- riempito via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione: Calendario -->
+    <section id="calendar" class="section">
+      <h1>Calendario raccolta differenziata</h1>
+      <div class="toolbar">
+        <label for="calendarComune" class="muted">Comune:</label>
+        <select id="calendarComune" style="max-width:220px;">
+          <option value="san_nicola">San Nicola la Strada</option>
+          <option value="san_marco">San Marco Evangelista</option>
+        </select>
+      </div>
+
+      <div id="calendarContent" class="grid grid-2">
+        <!-- riempito via JS -->
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Regole d'oro</h3>
+        <ul style="margin:0; padding-left:18px; color:var(--muted);">
+          <li>Esporre tra le 20:00 e le 22:00 circa.</li>
+          <li>Indifferenziato solo in sacchetti trasparenti/semitrasparenti (mai neri).</li>
+          <li>Plastica e metalli insieme nel sacco giallo/trasparente.</li>
+          <li>Vetro solo nel mastello rigido, mai in buste.</li>
+          <li>Ingombranti e RAEE: prenota il ritiro o portali all'Isola Ecologica.</li>
+        </ul>
+        <p style="margin-top:8px;">Possibili variazioni per festività·º o periodo estivo — verifica sempre gli avvisi ufficiali del Comune.</p>
+      </div>
+    </section>
+
+    <!-- Sezione: Forum -->
+    <section id="forum" class="section">
+      <h1>Forum di quartiere</h1>
+      <p>Confrontati con gli altri cittadini e proponi idee.</p>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>Nuova discussione</h2>
+          <form id="forumForm">
+            <div class="field">
+              <label for="forumTitle">Titolo</label>
+              <input type="text" id="forumTitle" required maxlength="120" placeholder="Es. Proposta per nuovi cassonetti in via Roma"/>
+            </div>
+            <div class="field">
+              <label for="forumContent">Messaggio</label>
+              <textarea id="forumContent" rows="5" required maxlength="1000" placeholder="Spiega la tua idea o il problema..."></textarea>
+              <div class="helper" id="forumCounter">0 / 1000 caratteri</div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="material-icons" aria-hidden="true">add</span> Pubblica
+            </button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <h2 style="margin:0;">Discussioni</h2>
+            <div class="spacer"></div>
+            <input type="text" id="forumSearch" placeholder="Cerca..." style="max-width:200px;"/>
+          </div>
+          <div id="forumList" class="grid">
+            <!-- riempito via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione: Mappa -->
+    <section id="map" class="section">
+      <h1>Mappa delle segnalazioni</h1>
+      <div class="toolbar">
+        <div class="pill-group" id="mapFilter">
+          <button class="pill active" data-filter="all">Tutte</button>
+          <button class="pill" data-filter="reported">Segnalato</button>
+          <button class="pill" data-filter="incharge">In carico</button>
+          <button class="pill" data-filter="resolved">Risolto</button>
+        </div>
+        <div class="spacer"></div>
+        <label for="mapComune" class="muted">Comune:</label>
+        <select id="mapComune" style="max-width:220px;">
+          <option value="san_nicola">San Nicola la Strada</option>
+          <option value="san_marco">San Marco Evangelista</option>
+        </select>
+      </div>
+
+      <div class="map-wrap">
+        <div id="map"></div>
+      </div>
+      <div class="legend">
+        Il colore del pin indica lo stato:
+        <span class="tag reported">segnalato</span> ·
+        <span class="tag incharge">in carico</span> ·
+        <span class="tag resolved">risolto</span>.
+      </div>
+    </section>
+
+    <!-- Sezione: Statistiche -->
+    <section id="stats" class="section">
+      <h1>Panoramica del territorio</h1>
+      <p>Statistiche calcolate sulle segnalazioni presenti — utili per mostrare al Comune dove intervenire con priorità.</p>
+
+      <div class="stats-grid" id="statsGrid">
+        <!-- riempito via JS -->
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Dettaglio per categoria</h3>
+        <div id="statsByCategory" class="grid">
+          <!-- riempito via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione: Moderazione (admin) -->
+    <section id="moderation" class="section">
+      <h1>Moderazione — post segnalati</h1>
+      <p>Pannello riservato agli amministratori.</p>
+
+      <div class="toolbar">
+        <div class="pill-group" id="modFilter">
+          <button class="pill active" data-filter="all">Tutte</button>
+          <button class="pill" data-filter="reported">Segnalato</button>
+          <button class="pill" data-filter="incharge">In carico</button>
+          <button class="pill" data-filter="resolved">Risolto</button>
+        </div>
+        <div class="spacer"></div>
+        <label for="modComune" class="muted">Comune:</label>
+        <select id="modComune" style="max-width:220px;">
+          <option value="san_nicola">San Nicola la Strada</option>
+          <option value="san_marco">San Marco Evangelista</option>
+        </select>
+      </div>
+
+      <div id="modList" class="grid grid-2">
+        <!-- riempito via JS -->
+      </div>
+    </section>
+
+    <!-- Sezione: Impostazioni / Account -->
+    <section id="settings" class="section">
+      <h1>Impostazioni</h1>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <h2>Account</h2>
+          <div class="field">
+            <label for="settingsName">Nome visualizzato</label>
+            <input type="text" id="settingsName" />
+          </div>
+          <div class="field">
+            <label for="settingsEmail">Email</label>
+            <input type="email" id="settingsEmail" disabled />
+            <div class="helper">L'email non è visibile agli altri utenti.</div>
+          </div>
+          <div class="row">
+            <button class="btn btn-primary" id="saveProfile">Salva profilo</button>
+            <button class="btn" id="changePasswordBtn">Cambia password</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Privacy e dati</h2>
+          <h3>Cosa vede il Comune</h3>
+          <p>Ogni segnalazione mostra al Comune la posizione esatta, la foto (se presente), il testo e la categoria scelta. Il tuo nome è visibile agli altri cittadini nel Forum, ma la tua email resta privata.</p>
+          <h3>Come usiamo i tuoi dati</h3>
+          <p>I dati servono solo a far funzionare l'app (mostrare le segnalazioni sulla mappa e nel forum) e non vengono ceduti a terzi né usati per pubblicità.</p>
+          <div class="row">
+            <button class="btn btn-danger" id="deleteAccount">Elimina account e dati</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Info app</h2>
+          <p>Versione: 1.0.0</p>
+          <div class="row">
+            <a class="btn" href="mailto:supporto@viridi.app">
+              <span class="material-icons" aria-hidden="true">bug_report</span> Segnala un problema con l'app
+            </a>
+          </div>
+        </div>
+
+        <div class="card" id="adminPanelCard" style="display:none;">
+          <h2>Amministrazione</h2>
+          <div class="row">
+            <button class="btn" data-nav="moderation">
+              <span class="material-icons" aria-hidden="true">shield_person</span> Pannello di moderazione
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="row">
+        <span>Progetto civico dei cittadini · dati condivisi in tempo reale · mappa OpenStreetMap © contributori OSM</span>
+        <span class="spacer"></span>
+        <span>in aggiunta ai canali ufficiali (Ecosportello, numero verde, PEC del Comune)</span>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Modale Auth -->
+  <div id="authModal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:100;">
+    <div class="card" style="max-width:420px; width:90%; max-height:90vh; overflow:auto;">
+      <div class="row">
+        <h2 style="margin:0;">Accedi a Viridi</h2>
+        <button class="btn btn-icon" id="closeAuth" aria-label="Chiudi">
+          <span class="material-icons" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <p>Accedi con la tua email per segnalare e discutere con il quartiere.</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" required placeholder="tu@esempio.it"/>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••"/>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Accedi</button>
+      </form>
+
+      <div style="margin-top:12px; text-align:center;">
+        <span class="muted">Non hai un account?</span>
+        <button class="btn" id="showRegister" style="margin-left:6px;">Registrati</button>
+      </div>
+
+      <form id="registerForm" class="hidden" style="margin-top:12px;">
+        <div class="field">
+          <label for="regEmail">Email</label>
+          <input type="email" id="regEmail" required placeholder="tu@esempio.it"/>
+        </div>
+        <div class="field">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" required placeholder="Minimo 6 caratteri" minlength="6"/>
+        </div>
+        <div class="field">
+          <label for="regName">Nome visualizzato</label>
+          <input type="text" id="regName" required placeholder="Il tuo nome"/>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Registrati</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modale Dettagli segnalazione (mappa e lista) -->
+  <div id="reportDetailModal" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:100;">
+    <div class="card" style="max-width:520px; width:90%; max-height:90vh; overflow:auto;">
+      <div class="row">
+        <h2 id="detailTitle" style="margin:0;">Segnalazione</h2>
+        <button class="btn btn-icon" id="closeDetail" aria-label="Chiudi">
+          <span class="material-icons" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    // --- Stato globale ---
+    const state = {
+      theme: localStorage.getItem("viridi_theme") || "light",
+      user: JSON.parse(localStorage.getItem("viridi_user") || "null"),
+      reports: JSON.parse(localStorage.getItem("viridi_reports") || "[]"),
+      forum: JSON.parse(localStorage.getItem("viridi_forum") || "[]"),
+      map: null,
+      mapMarkers: [],
+      choosingLocation: false,
+      currentDetailId: null
+    };
+
+    // --- Utilità·º ---
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const saveLS = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+    const fmtDate = (d) => new Date(d).toLocaleString("it-IT", {dateStyle:"short", timeStyle:"short"});
+    const categoryLabel = {
+      ingombranti: "Rifiuti ingombranti",
+      discarica: "Discarica abusiva",
+      cassonetti: "Cassonetti pieni",
+      pericoloso: "Materiale pericoloso",
+      idea: "Discussione / idea"
+    };
+    const comuneLabel = {
+      san_nicola: "San Nicola la Strada",
+      san_marco: "San Marco Evangelista"
+    };
+
+    // --- Tema ---
+    function applyTheme() {
+      document.documentElement.setAttribute("data-theme", state.theme);
+      $("#themeToggle span").textContent = state.theme === "dark" ? "light_mode" : "dark_mode";
+    }
+    $("#themeToggle").addEventListener("click", () => {
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("viridi_theme", state.theme);
+      applyTheme();
+    });
+
+    // --- Navigazione ---
+    function navigateTo(sectionId) {
+      $$(".section").forEach(s => s.classList.remove("active"));
+      $("#" + sectionId)?.classList.add("active");
+      if (sectionId === "map") setTimeout(initMap, 50);
+      if (sectionId === "stats") renderStats();
+    }
+    $$(".nav-btn[data-nav]").forEach(btn => {
+      btn.addEventListener("click", () => navigateTo(btn.dataset.nav));
+    });
+
+    // --- Auth UI ---
+    function updateAuthUI() {
+      const user = state.user;
+      if (user) {
+        $("#authBtn").textContent = "Esci";
+        $("#settingsBtn").style.display = "inline-flex";
+        $("#adminBadge").textContent = user.isAdmin ? "AMMINISTRATORE" : "";
+        $("#adminPanelCard").style.display = user.isAdmin ? "block" : "none";
+      } else {
+        $("#authBtn").textContent = "Accedi";
+        $("#settingsBtn").style.display = "none";
+        $("#adminBadge").textContent = "";
+        $("#adminPanelCard").style.display = "none";
+      }
+    }
+
+    // --- Modale Auth ---
+    const authModal = $("#authModal");
+    function openAuth() {
+      authModal.style.display = "flex";
+      authModal.classList.remove("hidden");
+      if (state.user) {
+        // mostra solo login, gestiamo logout dopo
+      }
+    }
+    function closeAuth() {
+      authModal.style.display = "none";
+      authModal.classList.add("hidden");
+    }
+    $("#authBtn").addEventListener("click", () => {
+      if (state.user) {
+        if (confirm("Vuoi davvero uscire dall'account?")) {
+          state.user = null;
+          localStorage.removeItem("viridi_user");
+          updateAuthUI();
+          navigateTo("home");
+        }
+      } else {
+        openAuth();
+      }
+    });
+    $("#closeAuth").addEventListener("click", closeAuth);
+    $("#showRegister").addEventListener("click", () => {
+      $("#loginForm").classList.add("hidden");
+      $("#registerForm").classList.remove("hidden");
+    });
+
+    // Login / Register
+    $("#loginForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = $("#loginEmail").value.trim().toLowerCase();
+      const password = $("#loginPassword").value;
+      // Simulazione: accettiamo qualsiasi email/password, admin se email contiene "admin"
+      const isAdmin = email.includes("admin");
+      const storedUsers = JSON.parse(localStorage.getItem("viridi_users") || "[]");
+      let user = storedUsers.find(u => u.email === email);
+      if (!user) {
+        // primo accesso: crea utente
+        user = { email, name: email.split("@")[0], isAdmin };
+        storedUsers.push(user);
+        localStorage.setItem("viridi_users", JSON.stringify(storedUsers));
+      }
+      state.user = user;
+      localStorage.setItem("viridi_user", JSON.stringify(user));
+      closeAuth();
+      updateAuthUI();
+      navigateTo("report");
+    });
+
+    $("#registerForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = $("#regEmail").value.trim().toLowerCase();
+      const password = $("#regPassword").value;
+      const name = $("#regName").value.trim();
+      const storedUsers = JSON.parse(localStorage.getItem("viridi_users") || "[]");
+      if (storedUsers.some(u => u.email === email)) {
+        alert("Esiste già un account con questa email.");
+        return;
+      }
+      const user = { email, name, isAdmin: email.includes("admin") };
+      storedUsers.push(user);
+      localStorage.setItem("viridi_users", JSON.stringify(storedUsers));
+      state.user = user;
+      localStorage.setItem("viridi_user", JSON.stringify(user));
+      closeAuth();
+      updateAuthUI();
+      navigateTo("settings");
+    });
+
+    // Settings
+    $("#settingsBtn").addEventListener("click", () => {
+      if (!state.user) return;
+      $("#settingsName").value = state.user.name || "";
+      $("#settingsEmail").value = state.user.email || "";
+      navigateTo("settings");
+    });
+
+    $("#saveProfile").addEventListener("click", () => {
+      if (!state.user) return;
+      const newName = $("#settingsName").value.trim();
+      if (!newName) { alert("Inserisci un nome."); return; }
+      state.user.name = newName;
+      localStorage.setItem("viridi_user", JSON.stringify(state.user));
+      const users = JSON.parse(localStorage.getItem("viridi_users") || "[]");
+      const idx = users.findIndex(u => u.email === state.user.email);
+      if (idx >= 0) { users[idx].name = newName; localStorage.setItem("viridi_users", JSON.stringify(users)); }
+      alert("Profilo aggiornato.");
+      updateAuthUI();
+    });
+
+    $("#changePasswordBtn").addEventListener("click", () => {
+      alert("Funzione non implementata in questa demo (servirebbe backend).");
+    });
+
+    $("#deleteAccount").addEventListener("click", () => {
+      if (!state.user) return;
+      if (!confirm("Sei sicuro? Questa azione eliminerà·º solo i dati locali (demo).")) return;
+      // Rimuovi utente e segnalazioni/forum associate
+      let users = JSON.parse(localStorage.getItem("viridi_users") || "[]");
+      users = users.filter(u => u.email !== state.user.email);
+      localStorage.setItem("viridi_users", JSON.stringify(users));
+      state.reports = state.reports.filter(r => r.userEmail !== state.user.email);
+      state.forum = state.forum.filter(f => f.userEmail !== state.user.email);
+      saveLS("viridi_reports", state.reports);
+      saveLS("viridi_forum", state.forum);
+      state.user = null;
+      localStorage.removeItem("viridi_user");
+      updateAuthUI();
+      navigateTo("home");
+      alert("Account eliminato (localmente).");
+    });
+
+    // --- Contatori caratteri ---
+    $("#reportDesc").addEventListener("input", () => {
+      const len = $("#reportDesc").value.length;
+      $("#descCounter").textContent = len + " / 500 caratteri";
+    });
+    $("#forumContent").addEventListener("input", () => {
+      const len = $("#forumContent").value.length;
+      $("#forumCounter").textContent = len + " / 1000 caratteri";
+    });
+
+    // --- Anteprima foto ---
+    $("#reportPhoto").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        $("#photoPreview").classList.add("hidden");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Foto troppo grande (max 5 MB).");
+        e.target.value = "";
+        $("#photoPreview").classList.add("hidden");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        $("#photoPreviewImg").src = reader.result;
+        $("#photoPreview").classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // --- Posizione ---
+    function updatePositionStatus(lat, lng) {
+      if (!lat || !lng) {
+        $("#positionStatus").textContent = "Nessuna posizione selezionata";
+        return;
+      }
+      $("#positionStatus").textContent = `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+    }
+    $("#useMyLocation").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocalizzazione non supportata dal browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          $("#reportLat").value = lat;
+          $("#reportLng").value = lng;
+          updatePositionStatus(lat, lng);
+        },
+        () => alert("Impossibile ottenere la posizione. Verifica i permessi."),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+
+    $("#chooseOnMap").addEventListener("click", () => {
+      state.choosingLocation = true;
+      navigateTo("map");
+      alert("Tocca la mappa per selezionare la posizione. Poi torna qui.");
+    });
+
+    // --- Invio segnalazione ---
+    $("#reportForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!state.user) {
+        alert("Devi accedere per inviare una segnalazione.");
+        openAuth();
+        return;
+      }
+      const comune = $("#reportComune").value;
+      const category = $("#reportCategory").value;
+      const desc = $("#reportDesc").value.trim();
+      const lat = parseFloat($("#reportLat").value);
+      const lng = parseFloat($("#reportLng").value);
+      const photoFile = $("#reportPhoto").files[0];
+
+      if (!desc) { alert("Inserisci una descrizione."); return; }
+      if (!lat || !lng) { alert("Seleziona una posizione."); return; }
+
+      const saveReport = (photoDataUrl) => {
+        const report = {
+          id: "r_" + Date.now(),
+          comune,
+          category,
+          desc,
+          lat,
+          lng,
+          photo: photoDataUrl || null,
+          status: "reported",
+          userEmail: state.user.email,
+          userName: state.user.name,
+          createdAt: new Date().toISOString()
+        };
+        state.reports.push(report);
+        saveLS("viridi_reports", state.reports);
+        alert("Segnalazione pubblicata!");
+        $("#reportForm").reset();
+        $("#photoPreview").classList.add("hidden");
+        updatePositionStatus(null, null);
+        renderMyReports();
+        renderMapMarkers();
+        renderStats();
+      };
+
+      if (photoFile) {
+        const reader = new FileReader();
+        reader.onload = () => saveReport(reader.result);
+        reader.readAsDataURL(photoFile);
+      } else {
+        saveReport(null);
+      }
+    });
+
+    // --- Le mie segnalazioni ---
+    let myReportsFilter = "all";
+    function renderMyReports() {
+      const container = $("#myReportsList");
+      container.innerHTML = "";
+      const list = state.reports
+        .filter(r => r.userEmail === (state.user?.email || ""))
+        .filter(r => myReportsFilter === "all" || r.status === myReportsFilter)
+        .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="muted">Nessuna segnalazione trovata.</p>`;
+        return;
+      }
+
+      list.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "forum-post";
+        const statusClass = r.status === "reported" ? "reported" : r.status === "incharge" ? "incharge" : "resolved";
+        el.innerHTML = `
+          <div class="post-meta">
+            <span class="tag ${statusClass}">${r.status === "reported" ? "Segnalato" : r.status === "incharge" ? "In carico" : "Risolto"}</span>
+            <strong>${categoryLabel[r.category]}</strong>
+            <span class="muted" style="font-size:12px;">${fmtDate(r.createdAt)}</span>
+          </div>
+          <div class="muted" style="font-size:13px;">${comuneLabel[r.comune]}</div>
+          <p style="margin-top:6px;">${r.desc}</p>
+          ${r.photo ? `<img src="${r.photo}" alt="Foto segnalazione" style="max-width:100%; border-radius:8px; margin-top:6px;">` : ""}
+          <div class="post-actions">
+            <button class="btn btn-icon" aria-label="Dettagli" data-detail="${r.id}">
+              <span class="material-icons">info</span>
+            </button>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+
+      container.querySelectorAll("[data-detail]").forEach(btn => {
+        btn.addEventListener("click", () => openReportDetail(btn.dataset.detail));
+      });
+    }
+    $("#myReportsFilter").addEventListener("click", (e) => {
+      if (!e.target.classList.contains("pill")) return;
+      $$("#myReportsFilter .pill").forEach(p => p.classList.remove("active"));
+      e.target.classList.add("active");
+      myReportsFilter = e.target.dataset.filter;
+      renderMyReports();
+    });
+
+    // --- Calendario ---
+    const calendarData = {
+      san_nicola: [
+        { title: "Organico", days: "domenica sera · raccolta lunedì", icon: "compost" },
+        { title: "Carta, Cartone e Tetrapak", days: "lunedì·º sera · raccolta martedì", icon: "description" },
+        { title: "Indifferenziato + Organico", days: "martedì·º sera · raccolta mercoledì", icon: "delete" },
+        { title: "Vetro", days: "mercoledì·º sera · raccolta giovedì", icon: "liquor" },
+        { title: "Plastica e Metalli", days: "giovedì·º sera · raccolta venerdì", icon: "recycling" },
+        { title: "Organico", days: "venerdì·º sera · raccolta sabato", icon: "compost" }
+      ],
+      san_marco: [
+        { title: "Organico (Umido)", days: "Lunedì·º, mercoledì e sabato", icon: "compost" },
+        { title: "Multimateriale (plastica e metalli)", days: "Ogni giovedì, più il martedì a settimane alterne", icon: "recycling" },
+        { title: "Secco residuale (indifferenziato)", days: "Martedì·º, settimane alterne rispetto al multimateriale", icon: "delete" },
+        { title: "Carta e Cartone", days: "Ogni mercoledì", icon: "description" },
+        { title: "Vetro", days: "Ogni venerdì", icon: "liquor" },
+        { title: "Pannolini e Pannoloni", days: "Martedì·º e venerdì", icon: "baby_changing_station" }
+      ]
+    };
+    function renderCalendar() {
+      const comune = $("#calendarComune").value;
+      const data = calendarData[comune] || [];
+      const container = $("#calendarContent");
+      container.innerHTML = "";
+      data.forEach(item => {
+        const el = document.createElement("div");
+        el.className = "calendar-day";
+        el.innerHTML = `
+          <strong><span class="material-icons" style="vertical-align:middle;font-size:16px;">${item.icon}</span> ${item.title}</strong>
+          <span class="muted" style="font-size:13px;">${item.days}</span>
+        `;
+        container.appendChild(el);
+      });
+    }
+    $("#calendarComune").addEventListener("change", renderCalendar);
+
+    // --- Forum ---
+    function renderForum() {
+      const container = $("#forumList");
+      const query = $("#forumSearch").value.trim().toLowerCase();
+      container.innerHTML = "";
+      const list = state.forum
+        .filter(f => !query || f.title.toLowerCase().includes(query) || f.content.toLowerCase().includes(query))
+        .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="muted">Nessuna discussione trovata.</p>`;
+        return;
+      }
+
+      list.forEach(f => {
+        const el = document.createElement("div");
+        el.className = "forum-post";
+        el.innerHTML = `
+          <div class="post-meta">
+            <div class="avatar">${(f.userName||"U")[0].toUpperCase()}</div>
+            <div>
+              <strong>${f.title}</strong>
+              <div class="muted" style="font-size:12px;">${f.userName} · ${fmtDate(f.createdAt)}</div>
+            </div>
+          </div>
+          <p style="margin:0;">${f.content.slice(0,160)}${f.content.length>160?"...":""}</p>
+        `;
+        container.appendChild(el);
+      });
+    }
+    $("#forumSearch").addEventListener("input", renderForum);
+
+    $("#forumForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!state.user) {
+        alert("Devi accedere per pubblicare nel forum.");
+        openAuth();
+        return;
+      }
+      const title = $("#forumTitle").value.trim();
+      const content = $("#forumContent").value.trim();
+      if (!title || !content) { alert("Compila titolo e messaggio."); return; }
+      const post = {
+        id: "f_" + Date.now(),
+        title,
+        content,
+        userEmail: state.user.email,
+        userName: state.user.name,
+        createdAt: new Date().toISOString()
+      };
+      state.forum.push(post);
+      saveLS("viridi_forum", state.forum);
+      $("#forumForm").reset();
+      renderForum();
+    });
+
+    // --- Mappa ---
+    function initMap() {
+      if (state.map) {
+        state.map.invalidateSize();
+        return;
+      }
+      state.map = L.map("map").setView([41.07, 14.34], 11); // zona Caserta
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "OpenStreetMap contributors"
+      }).addTo(state.map);
+
+      state.map.on("click", (e) => {
+        if (state.choosingLocation) {
+          $("#reportLat").value = e.latlng.lat;
+          $("#reportLng").value = e.latlng.lng;
+          updatePositionStatus(e.latlng.lat, e.latlng.lng);
+          state.choosingLocation = false;
+          alert("Posizione selezionata. Torna alla sezione Segnala.");
+          navigateTo("report");
+        } else {
+          // click normale: mostriamo eventuali marker vicini (demo: niente)
+        }
+      });
+
+      renderMapMarkers();
+    }
+
+    function renderMapMarkers() {
+      if (!state.map) return;
+      state.mapMarkers.forEach(m => state.map.removeLayer(m));
+      state.mapMarkers = [];
+
+      const comuneFilter = $("#mapComune").value;
+      const statusFilter = $("#mapFilter .pill.active").dataset.filter;
+
+      state.reports
+        .filter(r => r.comune === comuneFilter)
+        .filter(r => statusFilter === "all" || r.status === statusFilter)
+        .forEach(r => {
+          const color = r.status === "reported" ? "#2563eb" : r.status === "incharge" ? "#f59e0b" : "#16a34a";
+          const marker = L.circleMarker([r.lat, r.lng], {
+            radius: 8,
+            color,
+            fillColor: color,
+            fillOpacity: 0.8
+          }).addTo(state.map);
+          marker.bindPopup(`
+            <strong>${categoryLabel[r.category]}</strong><br>
+            <span class="muted">${comuneLabel[r.comune]}</span><br>
+            ${r.desc}<br>
+            <small>${fmtDate(r.createdAt)}</small>
+          `);
+          state.mapMarkers.push(marker);
+        });
+    }
+    $("#mapComune").addEventListener("change", renderMapMarkers);
+    $("#mapFilter").addEventListener("click", (e) => {
+      if (!e.target.classList.contains("pill")) return;
+      $$("#mapFilter .pill").forEach(p => p.classList.remove("active"));
+      e.target.classList.add("active");
+      renderMapMarkers();
+    });
+
+    // --- Statistiche ---
+    function renderStats() {
+      const grid = $("#statsGrid");
+      const total = state.reports.length;
+      const byStatus = { reported:0, incharge:0, resolved:0 };
+      state.reports.forEach(r => byStatus[r.status]++);
+      grid.innerHTML = `
+        <div class="stat-card">
+          <div class="value">${total}</div>
+          <div class="label">Segnalazioni totali</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${byStatus.reported}</div>
+          <div class="label">Segnalato</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${byStatus.incharge}</div>
+          <div class="label">In carico</div>
+        </div>
+        <div class="stat-card">
+          <div class="value">${byStatus.resolved}</div>
+          <div class="label">Risolto</div>
+        </div>
+      `;
+
+      const byCat = {};
+      state.reports.forEach(r => { byCat[r.category] = (byCat[r.category]||0)+1; });
+      const catContainer = $("#statsByCategory");
+      catContainer.innerHTML = "";
+      Object.entries(byCat).forEach(([cat, count]) => {
+        const el = document.createElement("div");
+        el.className = "calendar-day";
+        el.innerHTML = `<strong>${categoryLabel[cat]}</strong><span class="muted" style="font-size:13px;"> ${count} segnalazioni</span>`;
+        catContainer.appendChild(el);
+      });
+    }
+
+    // --- Moderazione (admin) ---
+    let modFilter = "all";
+    function renderModeration() {
+      const container = $("#modList");
+      container.innerHTML = "";
+      const comune = $("#modComune").value;
+      const list = state.reports
+        .filter(r => r.comune === comune)
+        .filter(r => modFilter === "all" || r.status === modFilter)
+        .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="muted">Nessuna segnalazione trovata.</p>`;
+        return;
+      }
+
+      list.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "card";
+        const statusClass = r.status === "reported" ? "reported" : r.status === "incharge" ? "incharge" : "resolved";
+        el.innerHTML = `
+          <div class="row">
+            <strong>${categoryLabel[r.category]}</strong>
+            <span class="tag ${statusClass}">${r.status === "reported" ? "Segnalato" : r.status === "incharge" ? "In carico" : "Risolto"}</span>
+          </div>
+          <div class="muted" style="font-size:13px;">${comuneLabel[r.comune]} · ${fmtDate(r.createdAt)}</div>
+          <p>${r.desc}</p>
+          ${r.photo ? `<img src="${r.photo}" alt="Foto" style="max-width:100%; border-radius:8px; margin-top:6px;">` : ""}
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" data-setstatus="${r.id}:reported">Segnalato</button>
+            <button class="btn" data-setstatus="${r.id}:incharge">In carico</button>
+            <button class="btn" data-setstatus="${r.id}:resolved">Risolto</button>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+
+      container.querySelectorAll("[data-setstatus]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const [id, status] = btn.dataset.setstatus.split(":");
+          const rep = state.reports.find(r => r.id === id);
+          if (rep) {
+            rep.status = status;
+            saveLS("viridi_reports", state.reports);
+            renderModeration();
+            renderMapMarkers();
+            renderMyReports();
+            renderStats();
+          }
+        });
+      });
+    }
+    $("#modComune").addEventListener("change", renderModeration);
+    $("#modFilter").addEventListener("click", (e) => {
+      if (!e.target.classList.contains("pill")) return;
+      $$("#modFilter .pill").forEach(p => p.classList.remove("active"));
+      e.target.classList.add("active");
+      modFilter = e.target.dataset.filter;
+      renderModeration();
+    });
+
+    // --- Dettagli segnalazione ---
+    function openReportDetail(id) {
+      const r = state.reports.find(x => x.id === id);
+      if (!r) return;
+      state.currentDetailId = id;
+      $("#detailTitle").textContent = categoryLabel[r.category];
+      const statusClass = r.status === "reported" ? "reported" : r.status === "incharge" ? "incharge" : "resolved";
+      $("#detailContent").innerHTML = `
+        <div class="row" style="margin-bottom:8px;">
+          <span class="tag ${statusClass}">${r.status === "reported" ? "Segnalato" : r.status === "incharge" ? "In carico" : "Risolto"}</span>
+          <span class="muted">${comuneLabel[r.comune]} · ${fmtDate(r.createdAt)}</span>
+        </div>
+        <p>${r.desc}</p>
+        ${r.photo ? `<img src="${r.photo}" alt="Foto segnalazione" style="max-width:100%; border-radius:8px; margin-top:6px;">` : ""}
+        <div class="row" style="margin-top:12px;">
+          <span class="muted" style="font-size:13px;">Posizione: ${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</span>
+        </div>
+      `;
+      const modal = $("#reportDetailModal");
+      modal.style.display = "flex";
+      modal.classList.remove("hidden");
+    }
+    function closeReportDetail() {
+      const modal = $("#reportDetailModal");
+      modal.style.display = "none";
+      modal.classList.add("hidden");
+      state.currentDetailId = null;
+    }
+    $("#closeDetail").addEventListener("click", closeReportDetail);
+
+    // --- Inizializzazione ---
+    applyTheme();
+    updateAuthUI();
+    renderCalendar();
+    renderForum();
+    renderMyReports();
+    renderStats();
+    renderModeration();
+    navigateTo("home");
+  </script>
+</body>
+</html>
