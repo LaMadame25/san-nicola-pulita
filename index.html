@@ -112,6 +112,17 @@
   .photo-tile img{display:none;width:100%;max-height:180px;object-fit:cover;border-radius:10px;}
   .photo-remove-btn{display:none;position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;align-items:center;justify-content:center;border:none;z-index:2;}
   .photo-tile.has-photo .photo-remove-btn{display:flex;}
+  /* Galleria foto multiple nel composer */
+  .photo-gallery{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;-webkit-overflow-scrolling:touch;}
+  .photo-thumb{position:relative;flex:0 0 auto;width:84px;height:84px;border-radius:12px;overflow:hidden;background:var(--bg);}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-thumb-remove{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;display:flex;align-items:center;justify-content:center;padding:0;}
+  .photo-tile.maxed{opacity:.45;pointer-events:none;}
+  .photo-hint{font-size:11px;color:var(--inkSoft);margin:-7px 0 12px;text-align:right;}
+  /* Galleria foto multiple nei post del feed */
+  .post-photo-gallery{display:flex;gap:6px;overflow-x:auto;margin-top:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;}
+  .post-photo-gallery .post-photo{flex:0 0 82%;scroll-snap-align:start;margin-top:0;}
+  .post-photo-count{font-size:10.5px;color:var(--inkSoft);text-align:right;margin-top:4px;}
   .compose-textarea{border:1.5px solid var(--line);border-radius:12px;background:var(--bg);padding:11px 12px;min-height:70px;margin-bottom:2px;}
   .cta-hint{text-align:center;font-size:11px;color:var(--inkSoft);margin-top:8px;}
   .segnala-stat{margin-top:18px;background:var(--greenSoft);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--accentText);}
@@ -448,12 +459,12 @@
           </button>
         </div>
 
+        <div class="photo-gallery" id="photoGallery" style="display:none;"></div>
         <div class="photo-tile" id="photoBtn">
-          <img id="photoPreview" style="display:none;" />
-          <button type="button" class="photo-remove-btn" id="removePhotoBtn" aria-label="Rimuovi foto"><span class="msr" style="font-size:16px;">close</span></button>
           <span class="msr photo-tile-icon">photo_camera</span>
-          <div class="photo-tile-label">Scatta o carica una foto</div>
+          <div class="photo-tile-label" id="photoTileLabel">Scatta o carica una foto</div>
         </div>
+        <div class="photo-hint" id="photoHint" style="display:none;"></div>
         <input type="file" id="photoInput" accept="image/*" style="display:none;" />
 
         <div class="tipo-chip-row" id="tipoChipRow">
@@ -734,7 +745,8 @@ let postsLoaded = false;
 
 let filterStato = "Tutti";
 let pendingLocation = null;
-let pendingFoto = null;
+let pendingFotos = [];
+const MAX_FOTOS = 4;
 let selectedComune = "San Nicola la Strada";
 document.querySelectorAll('#comuneBannerRow .comune-banner').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -1278,7 +1290,13 @@ function renderFeed(){
         </div>
       </div>
       <div class="post-text">${escapeHtml(p.testo)}</div>
-      ${p.foto ? `<img class="post-photo" src="${p.foto}" />` : ''}
+      ${(() => {
+        // Compatibilità: post vecchi hanno "foto" (singola), post nuovi hanno "fotos" (array)
+        const fotoList = (p.fotos && p.fotos.length) ? p.fotos : (p.foto ? [p.foto] : []);
+        if(fotoList.length === 0) return '';
+        if(fotoList.length === 1) return `<img class="post-photo" src="${fotoList[0]}" />`;
+        return `<div class="post-photo-gallery">${fotoList.map(f => `<img class="post-photo" src="${f}" />`).join('')}</div><div class="post-photo-count">${fotoList.length} foto — scorri per vederle tutte</div>`;
+      })()}
       ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--accentText);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
       <hr class="r-dash" />
       <div class="post-actions">
@@ -1487,10 +1505,14 @@ document.getElementById('clearLocBtn').addEventListener('click', ()=>{
   updateLocStatus();
 });
 
-document.getElementById('photoBtn').addEventListener('click', ()=> document.getElementById('photoInput').click());
+document.getElementById('photoBtn').addEventListener('click', ()=>{
+  if(pendingFotos.length >= MAX_FOTOS) return;
+  document.getElementById('photoInput').click();
+});
 document.getElementById('photoInput').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
+  if(pendingFotos.length >= MAX_FOTOS){ e.target.value=''; return; }
   const reader = new FileReader();
   reader.onload = ()=>{
     const img = new Image();
@@ -1507,31 +1529,56 @@ document.getElementById('photoInput').addEventListener('change', (e)=>{
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      pendingFoto = canvas.toDataURL('image/jpeg', 0.75);
-
-      const prev = document.getElementById('photoPreview');
-      prev.src = pendingFoto;
-      prev.style.display = 'block';
-      document.getElementById('photoBtn').classList.add('has-photo');
+      pendingFotos.push(canvas.toDataURL('image/jpeg', 0.75));
+      document.getElementById('photoInput').value = ''; // permette di riselezionare la stessa foto se serve
+      renderPhotoGallery();
       // Analisi IA disattivata: la funzione serverless "analyze-photo" non è ancora
       // distribuita (in attesa di finanziamento comunale). Verrà riattivata qui
-      // quando pronta: analyzePhoto(pendingFoto);
+      // quando pronta, sulla prima foto: analyzePhoto(pendingFotos[0]);
     };
     img.src = reader.result;
   };
   reader.readAsDataURL(file);
 });
 
-document.getElementById('removePhotoBtn').addEventListener('click', (e)=>{
-  e.stopPropagation();
-  pendingFoto = null;
-  pendingAnalysis = null;
-  document.getElementById('photoInput').value = '';
-  const prev = document.getElementById('photoPreview');
-  prev.src = ''; prev.style.display = 'none';
-  document.getElementById('photoBtn').classList.remove('has-photo');
-  document.getElementById('aiAnalysis').className = '';
-  document.getElementById('aiAnalysis').innerHTML = '';
+function renderPhotoGallery(){
+  const gallery = document.getElementById('photoGallery');
+  const tile = document.getElementById('photoBtn');
+  const label = document.getElementById('photoTileLabel');
+  const hint = document.getElementById('photoHint');
+
+  if(pendingFotos.length === 0){
+    gallery.style.display = 'none';
+    gallery.innerHTML = '';
+    tile.classList.remove('has-photo','maxed');
+    label.textContent = 'Scatta o carica una foto';
+    hint.style.display = 'none';
+    return;
+  }
+
+  gallery.style.display = 'flex';
+  gallery.innerHTML = pendingFotos.map((foto, i) => `
+    <div class="photo-thumb">
+      <img src="${foto}" />
+      <button type="button" class="photo-thumb-remove" data-i="${i}" aria-label="Rimuovi foto"><span class="msr" style="font-size:14px;">close</span></button>
+    </div>
+  `).join('');
+
+  tile.classList.add('has-photo');
+  const maxed = pendingFotos.length >= MAX_FOTOS;
+  tile.classList.toggle('maxed', maxed);
+  label.textContent = maxed ? `Limite raggiunto (${MAX_FOTOS})` : 'Aggiungi un\'altra angolazione';
+  hint.style.display = 'block';
+  hint.textContent = `${pendingFotos.length}/${MAX_FOTOS} foto`;
+}
+
+document.getElementById('photoGallery').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.photo-thumb-remove');
+  if(!btn) return;
+  const i = parseInt(btn.dataset.i, 10);
+  pendingFotos.splice(i, 1);
+  if(pendingFotos.length === 0){ pendingAnalysis = null; }
+  renderPhotoGallery();
 });
 
 const postTextEl = document.getElementById('postText');
@@ -1561,7 +1608,7 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
     lat: loc.lat, lng: loc.lng, via,
     comune: selectedComune,
     tipo: document.getElementById('tipoSelect').value,
-    testo, foto: pendingFoto,
+    testo, fotos: pendingFotos,
     aiMaterial: pendingAnalysis ? pendingAnalysis.material : null,
     aiCategory: pendingAnalysis ? pendingAnalysis.category : null
   };
@@ -1593,9 +1640,8 @@ document.getElementById('composer').addEventListener('submit', async (e)=>{
   }
 
   posts.unshift(post);
-  postTextEl.value=''; pendingLocation=null; pendingFoto=null; pendingAnalysis=null;
-  document.getElementById('photoPreview').style.display='none';
-  document.getElementById('photoBtn').classList.remove('has-photo');
+  postTextEl.value=''; pendingLocation=null; pendingFotos=[]; pendingAnalysis=null;
+  renderPhotoGallery();
   document.getElementById('photoInput').value='';
   document.getElementById('aiAnalysis').className = '';
   document.getElementById('aiAnalysis').innerHTML = '';
