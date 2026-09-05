@@ -257,7 +257,18 @@
   select.stato-select.in-carico{border-color:var(--amber);color:var(--amber);}
   select.stato-select.risolto{border-color:var(--green);color:var(--green);}
   .post-text{font-size:14px;line-height:1.5;margin-top:10px;}
-  .post-photo{width:100%;margin-top:10px;border-radius:12px;max-height:260px;object-fit:cover;}
+  .post-photo{width:100%;margin-top:10px;border-radius:12px;max-height:260px;object-fit:cover;cursor:zoom-in;}
+  /* Lightbox per la visualizzazione a schermo intero con zoom */
+  .lightbox-overlay{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:9999;display:none;align-items:center;justify-content:center;touch-action:none;overscroll-behavior:contain;}
+  .lightbox-overlay.open{display:flex;}
+  .lightbox-imgwrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .lightbox-img{max-width:94vw;max-height:88vh;object-fit:contain;touch-action:none;user-select:none;-webkit-user-drag:none;will-change:transform;transition:transform .06s linear;}
+  .lightbox-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;border:none;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .lightbox-counter{position:absolute;top:calc(env(safe-area-inset-top,0px) + 22px);left:0;right:0;text-align:center;color:rgba(255,255,255,.85);font-size:13px;font-weight:700;pointer-events:none;}
+  .lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;border:none;display:flex;align-items:center;justify-content:center;z-index:2;}
+  .lightbox-nav.prev{left:10px;}
+  .lightbox-nav.next{right:10px;}
+  .lightbox-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);left:0;right:0;text-align:center;color:rgba(255,255,255,.55);font-size:11.5px;pointer-events:none;}
   .post-actions{display:flex;gap:18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
   .action-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;background:none;color:var(--inkSoft);}
   .action-btn.liked{color:var(--red);}
@@ -1294,8 +1305,8 @@ function renderFeed(){
         // Compatibilità: post vecchi hanno "foto" (singola), post nuovi hanno "fotos" (array)
         const fotoList = (p.fotos && p.fotos.length) ? p.fotos : (p.foto ? [p.foto] : []);
         if(fotoList.length === 0) return '';
-        if(fotoList.length === 1) return `<img class="post-photo" src="${fotoList[0]}" />`;
-        return `<div class="post-photo-gallery">${fotoList.map(f => `<img class="post-photo" src="${f}" />`).join('')}</div><div class="post-photo-count">${fotoList.length} foto — scorri per vederle tutte</div>`;
+        if(fotoList.length === 1) return `<img class="post-photo" src="${fotoList[0]}" data-post-id="${p.id}" data-index="0" />`;
+        return `<div class="post-photo-gallery">${fotoList.map((f,i) => `<img class="post-photo" src="${f}" data-post-id="${p.id}" data-index="${i}" />`).join('')}</div><div class="post-photo-count">${fotoList.length} foto — scorri per vederle tutte</div>`;
       })()}
       ${p.aiMaterial ? `<div style="margin-top:8px;font-size:11px;background:var(--greenSoft);color:var(--accentText);display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;"><span class="msr" style="font-size:12px;vertical-align:-2px;">${DISPOSAL_GUIDE[p.aiCategory]?.icon || 'search'}</span> IA: ${escapeHtml(p.aiMaterial)}</div>` : ''}
       <hr class="r-dash" />
@@ -1953,6 +1964,163 @@ function showIOSInstallBanner(){
     localStorage.setItem('iosInstallDismissed', '1');
   });
 }
+
+// ===================== LIGHTBOX FOTO (zoom + navigazione) =====================
+(function(){
+  const overlay = document.getElementById('lightboxOverlay');
+  const imgEl = document.getElementById('lightboxImg');
+  const imgwrap = document.getElementById('lightboxImgwrap');
+  const counterEl = document.getElementById('lightboxCounter');
+  const prevBtn = document.getElementById('lightboxPrev');
+  const nextBtn = document.getElementById('lightboxNext');
+  const closeBtn = document.getElementById('lightboxClose');
+
+  let gallery = [];      // lista foto correnti (array di data URL)
+  let index = 0;         // indice foto corrente
+  let scale = 1, tx = 0, ty = 0; // stato dello zoom/pan corrente
+
+  function applyTransform(){
+    imgEl.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+  function resetZoom(){
+    scale = 1; tx = 0; ty = 0;
+    applyTransform();
+  }
+  function updateNav(){
+    const multi = gallery.length > 1;
+    prevBtn.style.display = multi ? 'flex' : 'none';
+    nextBtn.style.display = multi ? 'flex' : 'none';
+    counterEl.textContent = multi ? `${index+1} / ${gallery.length}` : '';
+  }
+  function showIndex(i){
+    if(gallery.length === 0) return;
+    index = (i + gallery.length) % gallery.length;
+    imgEl.src = gallery[index];
+    resetZoom();
+    updateNav();
+  }
+  function openLightbox(fotoList, startIndex){
+    gallery = fotoList; 
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showIndex(startIndex || 0);
+  }
+  function closeLightbox(){
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+    imgEl.src = '';
+    gallery = [];
+  }
+
+  // Apertura al click su qualsiasi foto di un post nel feed (delega sull'intero documento,
+  // così funziona anche per elementi renderizzati dopo il caricamento iniziale)
+  document.addEventListener('click', (e)=>{
+    const img = e.target.closest('.post-photo');
+    if(!img) return;
+    const postId = img.dataset.postId;
+    const startIdx = parseInt(img.dataset.index || '0', 10);
+    // Ricostruisce la lista foto di quello specifico post dal modello dati "posts"
+    const post = (typeof posts !== 'undefined') ? posts.find(p => p.id === postId) : null;
+    if(!post) return;
+    const fotoList = (post.fotos && post.fotos.length) ? post.fotos : (post.foto ? [post.foto] : []);
+    if(fotoList.length === 0) return;
+    openLightbox(fotoList, startIdx);
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+  overlay.addEventListener('click', (e)=>{
+    // Chiude solo se si clicca sullo sfondo, non sull'immagine o sui controlli
+    if(e.target === overlay || e.target === imgwrap) closeLightbox();
+  });
+  prevBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showIndex(index - 1); });
+  nextBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showIndex(index + 1); });
+  document.addEventListener('keydown', (e)=>{
+    if(!overlay.classList.contains('open')) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') showIndex(index - 1);
+    if(e.key === 'ArrowRight') showIndex(index + 1);
+  });
+
+  // ---- Zoom con doppio tocco (mobile) / doppio click (desktop) ----
+  let lastTapTime = 0;
+  imgEl.addEventListener('click', (e)=>{
+    const now = Date.now();
+    if(now - lastTapTime < 300){
+      // doppio tocco/click: alterna tra 1x e 2.5x, centrato sul punto toccato
+      if(scale === 1){
+        scale = 2.5;
+        const rect = imgEl.getBoundingClientRect();
+        const offsetX = (e.clientX - rect.left - rect.width/2);
+        const offsetY = (e.clientY - rect.top - rect.height/2);
+        tx = -offsetX * (scale - 1) / scale;
+        ty = -offsetY * (scale - 1) / scale;
+      } else {
+        scale = 1; tx = 0; ty = 0;
+      }
+      applyTransform();
+    }
+    lastTapTime = now;
+  });
+
+  // ---- Pizzica per zoomare + trascina per spostare (touch) ----
+  let touchState = null; // { mode: 'pinch'|'pan', ... }
+
+  function dist(t1, t2){
+    return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+  }
+
+  imgwrap.addEventListener('touchstart', (e)=>{
+    if(e.touches.length === 2){
+      touchState = {
+        mode: 'pinch',
+        startDist: dist(e.touches[0], e.touches[1]),
+        startScale: scale
+      };
+    } else if(e.touches.length === 1 && scale > 1){
+      touchState = {
+        mode: 'pan',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        startTx: tx,
+        startTy: ty
+      };
+    }
+  }, { passive: true });
+
+  imgwrap.addEventListener('touchmove', (e)=>{
+    if(!touchState) return;
+    if(touchState.mode === 'pinch' && e.touches.length === 2){
+      e.preventDefault();
+      const newDist = dist(e.touches[0], e.touches[1]);
+      let newScale = touchState.startScale * (newDist / touchState.startDist);
+      newScale = Math.min(Math.max(newScale, 1), 5);
+      scale = newScale;
+      applyTransform();
+    } else if(touchState.mode === 'pan' && e.touches.length === 1){
+      e.preventDefault();
+      tx = touchState.startTx + (e.touches[0].clientX - touchState.startX);
+      ty = touchState.startTy + (e.touches[0].clientY - touchState.startY);
+      applyTransform();
+    }
+  }, { passive: false });
+
+  imgwrap.addEventListener('touchend', (e)=>{
+    if(e.touches.length === 0){
+      touchState = null;
+      if(scale < 1.05){ scale = 1; tx = 0; ty = 0; applyTransform(); }
+    }
+  });
+})();
 </script>
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <div class="lightbox-counter" id="lightboxCounter"></div>
+  <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Chiudi"><span class="msr">close</span></button>
+  <button type="button" class="lightbox-nav prev" id="lightboxPrev" aria-label="Foto precedente"><span class="msr">chevron_left</span></button>
+  <div class="lightbox-imgwrap" id="lightboxImgwrap">
+    <img class="lightbox-img" id="lightboxImg" src="" />
+  </div>
+  <button type="button" class="lightbox-nav next" id="lightboxNext" aria-label="Foto successiva"><span class="msr">chevron_right</span></button>
+  <div class="lightbox-hint">Doppio tocco o pizzica per ingrandire</div>
+</div>
 </body>
 </html>
